@@ -16,6 +16,14 @@ class Solo extends Command
 
     protected $description = 'Start all the commands required to develop this application.';
 
+    protected function configure(): void
+    {
+        $this->setAliases([
+            'dev',
+        ]);
+
+        parent::configure();
+    }
     public function handle(): void
     {
         Dashboard::start();
