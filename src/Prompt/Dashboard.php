@@ -111,21 +111,21 @@ class Dashboard extends Prompt
             ->on('r', fn() => $this->currentCommand()->restart())
 
             // Scrolling
-            ->onDown(fn() => $this->currentCommand()->scrollDown())
-            ->on(Key::SHIFT_DOWN, fn() => $this->currentCommand()->scrollDown(10))
-            ->onUp(fn() => $this->currentCommand()->scrollUp())
-            ->on(Key::SHIFT_UP, fn() => $this->currentCommand()->scrollUp(10))
+            ->on(['j', Key::DOWN, Key::DOWN_ARROW], fn() => $this->currentCommand()->scrollDown())
+            ->on([Key::CTRL_D, Key::SHIFT_DOWN ], fn() => $this->currentCommand()->scrollDown(10))
+            ->on(['k', Key::UP, Key::UP_ARROW], fn() => $this->currentCommand()->scrollUp())
+            ->on([Key::CTRL_U, Key::SHIFT_UP], fn() => $this->currentCommand()->scrollUp(10))
 
             // Processes
             ->on('s', fn() => $this->currentCommand()->toggle())
-            ->onLeft(function () {
+            ->on(['h', Key::LEFT, Key::LEFT_ARROW], function () {
                 $this->currentCommand()->blur();
 
                 $this->selectedCommand = ($this->selectedCommand - 1 + count($this->commands)) % count($this->commands);
 
                 $this->currentCommand()->focus();
             })
-            ->onRight(function () {
+            ->on(['l', Key::RIGHT, Key::RIGHT_ARROW], function () {
                 $this->currentCommand()->blur();
 
                 $this->selectedCommand = ($this->selectedCommand + 1) % count($this->commands);

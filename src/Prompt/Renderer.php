@@ -223,8 +223,8 @@ class Renderer extends PromptsRenderer
     protected function renderHotkeys(): void
     {
         $this->pinToBottom($this->height, function () {
-            $this->hotkey('←', 'Previous');
-            $this->hotkey('→', 'Next');
+            $this->hotkey('←/h', 'Previous');
+            $this->hotkey('→/l', 'Next');
 
             $this->currentCommand->paused ? $this->hotkey('f', 'Follow') : $this->hotkey('p', 'Pause ');
 
