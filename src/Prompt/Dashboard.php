@@ -138,6 +138,12 @@ class Dashboard extends Prompt
             ->onUp(fn() => $this->currentCommand()->scrollUp())
             ->on(Key::SHIFT_UP, fn() => $this->currentCommand()->scrollUp(10))
 
+            ->on($pageDown, fn() => $this->currentCommand()->scrollDown($oneFrame))
+            ->on($pageUp, fn() => $this->currentCommand()->scrollUp($oneFrame))
+            
+            ->on(Key::HOME, fn() =>  $this->currentCommand()->scrollToTop())
+            ->on(Key::END, fn() =>  $this->currentCommand()->scrollToBottom())
+
             // Processes
             ->on('s', fn() => $this->currentCommand()->toggle())
             ->onLeft(function () {
