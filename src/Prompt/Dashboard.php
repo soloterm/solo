@@ -120,6 +120,10 @@ class Dashboard extends Prompt
 
     protected function showDashboard(): void
     {
+        $oneFrame = $this->currentCommand()->scrollPaneHeight() - 1;
+        $pageUp = "\e[5~";
+        $pageDown = "\e[6~";
+
         $listener = KeyPressListener::for($this)
             ->on('D', fn() => $this->currentCommand()->dd())
             // Logs
