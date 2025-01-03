@@ -120,6 +120,10 @@ class Dashboard extends Prompt
 
     protected function showDashboard(): void
     {
+        $oneFrame = $this->currentCommand()->scrollPaneHeight() - 1;
+        $pageUp = "\e[5~";
+        $pageDown = "\e[6~";
+
         $listener = KeyPressListener::for($this)
             ->on('D', fn() => $this->currentCommand()->dd())
             // Logs
@@ -133,6 +137,12 @@ class Dashboard extends Prompt
             ->on(Key::SHIFT_DOWN, fn() => $this->currentCommand()->scrollDown(10))
             ->onUp(fn() => $this->currentCommand()->scrollUp())
             ->on(Key::SHIFT_UP, fn() => $this->currentCommand()->scrollUp(10))
+
+            ->on($pageDown, fn() => $this->currentCommand()->scrollDown($oneFrame))
+            ->on($pageUp, fn() => $this->currentCommand()->scrollUp($oneFrame))
+
+            ->on(Key::HOME, fn() => $this->currentCommand()->scrollToTop())
+            ->on(Key::END, fn() => $this->currentCommand()->scrollToBottom())
 
             // Processes
             ->on('s', fn() => $this->currentCommand()->toggle())

@@ -163,6 +163,18 @@ class Command implements Loopable
         }
     }
 
+    public function scrollToTop(): void
+    {
+        $this->paused = true;
+        $this->scrollIndex = 0;
+    }
+
+    public function scrollToBottom(): void
+    {
+        $this->paused = true;
+        $this->scrollIndex = $this->wrappedLines()->count() - $this->scrollPaneHeight();
+    }
+
     public function scrollDown($amount = 1): void
     {
         $this->paused = true;
