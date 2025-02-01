@@ -88,6 +88,14 @@ class DefaultHotkeys implements HotkeyProvider
                 ->label('Page down')
                 ->invisible(),
 
+            'home' => Hotkey::make(Key::HOME, KeyHandler::Home)
+                ->label('Home')
+                ->invisible(),
+
+            'end' => Hotkey::make(Key::END, KeyHandler::End)
+                ->label('End')
+                ->invisible(),
+
             // 'dd' => Hotkey::make('d', KeyHandler::DD)
             //     ->label('DD')
             //     ->invisible(),
