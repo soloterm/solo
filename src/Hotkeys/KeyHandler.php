@@ -26,6 +26,10 @@ enum KeyHandler
     case PageUp;
     case PageDown;
 
+    case Home;
+
+    case End;
+
     // Processes
     case Start;
     case Stop;
@@ -59,6 +63,8 @@ enum KeyHandler
             self::ScrollDown => fn(Command $command) => $command->scrollDown(),
             self::PageUp => fn(Command $command) => $command->pageUp(),
             self::PageDown => fn(Command $command) => $command->pageDown(),
+            self::Home => fn(Command $command) => $command->scrollToTop(),
+            self::End => fn(Command $command) => $command->scrollToBottom(),
             self::Interactive => fn(Dashboard $prompt) => $prompt->enterInteractiveMode(),
             self::DD => fn(Command $command) => $command->dd(),
             self::ShowCommandChooser => fn(Dashboard $prompt) => $prompt->showPopup(new CommandPalette),
