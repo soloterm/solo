@@ -28,7 +28,23 @@ class DarkTheme extends LightTheme
 
     public function tabStopped(string $text): string
     {
-        return ' ' . $this->strikethrough(trim($text)) . ' ';
+        $text = trim($text);
+
+        return $this->red('•') . $this->dim($text . ' ');
+    }
+
+    public function tabRunning(string $text): string
+    {
+        $text = trim($text);
+
+        return $this->green('•') . $this->dim($text . ' ');
+    }
+
+    public function tabPaused(string $text): string
+    {
+        $text = trim($text);
+
+        return $this->yellow('•') . $this->dim($text . ' ');
     }
 
     /*
