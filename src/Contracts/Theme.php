@@ -22,6 +22,10 @@ interface Theme
 
     public function tabStopped(string $text): string;
 
+    public function tabRunning(string $text): string;
+
+    public function tabPaused(string $text): string;
+
     public function tabMore(string $text): string;
 
     /*

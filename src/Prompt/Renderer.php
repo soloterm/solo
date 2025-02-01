@@ -188,6 +188,14 @@ class Renderer extends PromptsRenderer
             $name = $this->theme->tabStopped($name);
         }
 
+        if ($command->processRunning() && !$command->paused) {
+            $name = $this->theme->tabRunning($name);
+        }
+
+        if ($command->processRunning() && $command->paused) {
+            $name = $this->theme->tabPaused($name);
+        }
+
         return $command->isFocused() ? $this->theme->tabFocused($name) : $this->theme->tabBlurred($name);
     }
 
