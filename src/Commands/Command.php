@@ -236,6 +236,11 @@ class Command implements Loopable
         $this->scrollTo($this->scrollIndex + $amount);
     }
 
+    public function scrollToBottom(): void
+    {
+        $this->scrollDown($this->wrappedLines()->count() - $this->scrollPaneHeight());
+    }
+
     public function pageDown()
     {
         $this->scrollDown($this->scrollPaneHeight() - 1);
@@ -250,6 +255,11 @@ class Command implements Loopable
     public function pageUp()
     {
         $this->scrollUp($this->scrollPaneHeight() - 1);
+    }
+
+    public function scrollToTop(): void
+    {
+        $this->scrollUp($this->scrollIndex);
     }
 
     /*
