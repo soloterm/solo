@@ -117,11 +117,11 @@ class Manager
      */
     public function hotkeys(): array
     {
-        $bindings = Config::array('solo.keybindings', []);
-        $binding = Config::string('solo.keybinding', 'default');
         $bindings = Config::get('solo.keybindings', []);
+        $this->checkType($bindings, 'array');
 
         $binding = Config::get('solo.keybinding', 'default');
+        $this->checkType($binding, 'string');
 
         $hotkeys = Arr::get($bindings, $binding, DefaultHotkeys::class);
 
@@ -138,13 +138,13 @@ class Manager
             return $this->cachedTheme;
         }
 
-        $theme = Config::string('solo.theme', 'light');
-        $themes = Config::array('solo.themes', [
         $theme = Config::get('solo.theme', 'light');
+        $this->checkType($theme, 'string');
 
         $themes = Config::get('solo.themes', [
             'light' => LightTheme::class,
         ]);
+        $this->checkType($themes, 'array');
 
         $theme = Arr::get($themes, $theme, $theme);
 
