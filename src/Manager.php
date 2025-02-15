@@ -109,8 +109,8 @@ class Manager
      */
     public function hotkeys(): array
     {
-        $bindings = Config::array('solo.keybindings', []);
-        $binding = Config::string('solo.keybinding', 'default');
+        $bindings = config('solo.keybindings', []);
+        $binding = config('solo.keybinding', 'default');
 
         $hotkeys = Arr::get($bindings, $binding, DefaultHotkeys::class);
 
@@ -127,8 +127,8 @@ class Manager
             return $this->cachedTheme;
         }
 
-        $theme = Config::string('solo.theme', 'light');
-        $themes = Config::array('solo.themes', [
+        $theme = config('solo.theme', 'light');
+        $themes = config('solo.themes', [
             'light' => LightTheme::class,
         ]);
 
