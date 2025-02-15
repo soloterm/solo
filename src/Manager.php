@@ -102,6 +102,14 @@ class Manager
         return $this;
     }
 
+    private function checkType(mixed $value, string $type): void
+    {
+        $actualType = gettype($value);
+        if ($actualType !== $type) {
+            throw new InvalidArgumentException("Config value must be of type {$type}, {$actualType} given.");
+        }
+    }
+
     /**
      * @return array<Hotkey>
      *
@@ -111,6 +119,9 @@ class Manager
     {
         $bindings = Config::array('solo.keybindings', []);
         $binding = Config::string('solo.keybinding', 'default');
+        $bindings = Config::get('solo.keybindings', []);
+
+        $binding = Config::get('solo.keybinding', 'default');
 
         $hotkeys = Arr::get($bindings, $binding, DefaultHotkeys::class);
 
@@ -129,6 +140,9 @@ class Manager
 
         $theme = Config::string('solo.theme', 'light');
         $themes = Config::array('solo.themes', [
+        $theme = Config::get('solo.theme', 'light');
+
+        $themes = Config::get('solo.themes', [
             'light' => LightTheme::class,
         ]);
 
