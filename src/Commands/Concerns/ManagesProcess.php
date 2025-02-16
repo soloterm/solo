@@ -12,8 +12,8 @@ namespace SoloTerm\Solo\Commands\Concerns;
 use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Process;
 use ReflectionClass;
+use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use Symfony\Component\Process\InputStream;
@@ -55,6 +55,24 @@ trait ManagesProcess
             // entering interactive mode.
             ->pty()
             ->input($this->input);
+
+        if ($this->workingDirectory && !is_dir($this->workingDirectory)) {
+            $errorBox = new ErrorBox([
+                    "Directory not found: {$this->workingDirectory}",
+                    "Please check the working directory in config"
+                ]);
+
+            $this->addOutput($errorBox->render());
+
+            return $process->command('')
+                ->input(null);
+        }
+
+        if ($this->workingDirectory && is_dir($this->workingDirectory)) {
+            $this->withProcess(function (PendingProcess $process) {
+                $process->path($this->workingDirectory);
+            });
+        }
 
         if ($this->processModifier) {
             call_user_func($this->processModifier, $process);
