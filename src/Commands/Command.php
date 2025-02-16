@@ -55,7 +55,7 @@ class Command implements Loopable
         return new static(command: $command);
     }
 
-    public function inDirectory (string $directory): static
+    public function inDirectory(string $directory): static
     {
         $this->workingDirectory = $directory;
 

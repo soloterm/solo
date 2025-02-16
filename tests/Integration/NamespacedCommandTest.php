@@ -27,7 +27,6 @@ class NamespacedCommandTest extends Base
             's', fn($plain) => $this->assertStringContainsString('Directory not found: resources/js/vue3', $plain),
         ];
 
-
         $this->runSolo($actions, function () {
             config()->set('solo.commands', [
                 'List' => Command::from('ls')

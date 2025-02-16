@@ -11,7 +11,7 @@ class ErrorBoxTest extends TestCase
     #[Test]
     public function it_renders_a_box_with_the_default_error_title_and_color(): void
     {
-        $message  = "An error occurred";
+        $message = 'An error occurred';
         $errorBox = new ErrorBox($message);
 
         $output = $errorBox->render();
@@ -32,7 +32,7 @@ class ErrorBoxTest extends TestCase
     public function it_renders_a_box_with_custom_title_and_multiple_message_lines(): void
     {
         $messages = ['Line 1', 'Line 2'];
-        $title    = 'Custom Error';
+        $title = 'Custom Error';
         $errorBox = new ErrorBox($messages, $title, 'red');
 
         $output = $errorBox->render();
@@ -48,7 +48,7 @@ class ErrorBoxTest extends TestCase
     #[Test]
     public function it_applies_the_default_red_color(): void
     {
-        $message  = "Color test";
+        $message = 'Color test';
         $errorBox = new ErrorBox($message);
 
         $output = $errorBox->render();
@@ -59,7 +59,7 @@ class ErrorBoxTest extends TestCase
     #[Test]
     public function it_applies_a_custom_color()
     {
-        $message  = "Color test";
+        $message = 'Color test';
         $errorBox = new ErrorBox($message, 'Custom Error', 'green');
 
         $output = $errorBox->render();

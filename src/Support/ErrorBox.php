@@ -13,10 +13,9 @@ class ErrorBox
 
     public function __construct(
         public string|array $message,
-        public string|null  $title = null,
-        public string|null  $color = null,
-    )
-    {
+        public ?string $title = null,
+        public ?string $color = null,
+    ) {
         $this->message = is_string($this->message) ? [$this->message] : $this->message;
         $this->title ??= 'Error';
         $this->color ??= 'red';
@@ -35,14 +34,14 @@ class ErrorBox
 
         // Build the top border with the title.
         // We start with a space, then the title, then another space.
-        $usedLength  = mb_strlen($this->title) +  $sidePadding;
-        $remaining   = max(0, $contentWidth - $usedLength);
+        $usedLength = mb_strlen($this->title) + $sidePadding;
+        $remaining = max(0, $contentWidth - $usedLength);
         $topBorder = $this->$color(
-                $this->boxPiece('topLeft')
-                . ' ' . $this->title . ' '
-                . str_repeat($this->boxPiece('horizontal'), $remaining)
-                . $this->boxPiece('topRight')
-            );
+            $this->boxPiece('topLeft')
+            . ' ' . $this->title . ' '
+            . str_repeat($this->boxPiece('horizontal'), $remaining)
+            . $this->boxPiece('topRight')
+        );
 
         // Build the bottom border (full horizontal line).
         $bottomBorder =
@@ -69,14 +68,13 @@ class ErrorBox
 
     protected function boxPiece(string $position)
     {
-        return match($position) {
-            'topLeft'     => '╔',
-            'topRight'    => '╗',
-            'vertical'    => '║',
-            'horizontal'  => '═',
-            'bottomLeft'  => '╚',
+        return match ($position) {
+            'topLeft' => '╔',
+            'topRight' => '╗',
+            'vertical' => '║',
+            'horizontal' => '═',
+            'bottomLeft' => '╚',
             'bottomRight' => '╝',
         };
     }
-
 }

@@ -58,9 +58,9 @@ trait ManagesProcess
 
         if ($this->workingDirectory && !is_dir($this->workingDirectory)) {
             $errorBox = new ErrorBox([
-                    "Directory not found: {$this->workingDirectory}",
-                    "Please check the working directory in config"
-                ]);
+                "Directory not found: {$this->workingDirectory}",
+                'Please check the working directory in config'
+            ]);
 
             $this->addOutput($errorBox->render());
 
