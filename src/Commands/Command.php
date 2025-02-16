@@ -48,9 +48,18 @@ class Command implements Loopable
 
     public ?KeyPressListener $keyPressListener = null;
 
+    protected ?string $workingDirectory = null;
+
     public static function from(string $command): static
     {
         return new static(command: $command);
+    }
+
+    public function inDirectory (string $directory): static
+    {
+        $this->workingDirectory = $directory;
+
+        return $this;
     }
 
     public static function make(mixed ...$arguments): static
