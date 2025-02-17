@@ -23,8 +23,6 @@ class EnhancedTailCommand extends Command
 
     protected bool $hideVendor = true;
 
-    protected bool $shouldCreateMissingLogFile = false;
-
     protected int $compressed = 0;
 
     protected ?int $pendingScrollIndex = null;
@@ -42,14 +40,12 @@ class EnhancedTailCommand extends Command
     {
         $this->file = $path;
 
-        $this->createLogFileIfMissing();
-
         return $this;
     }
 
     public function createIfMissing(): self
     {
-        $this->shouldCreateMissingLogFile = true;
+        $this->createLogFileIfMissing();
 
         return $this;
     }
@@ -333,7 +329,7 @@ class EnhancedTailCommand extends Command
 
     protected function createLogFileIfMissing(): bool
     {
-        if ($this->shouldCreateMissingLogFile && $this->isLogFileMissing()) {
+        if ($this->isLogFileMissing()) {
             return touch($this->file);
         }
         return true;
