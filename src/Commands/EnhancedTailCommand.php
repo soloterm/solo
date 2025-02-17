@@ -23,6 +23,8 @@ class EnhancedTailCommand extends Command
 
     protected bool $hideVendor = true;
 
+    protected bool $shouldCreateMissingLogFile = false;
+
     protected int $compressed = 0;
 
     protected ?int $pendingScrollIndex = null;
@@ -39,6 +41,15 @@ class EnhancedTailCommand extends Command
     public function setFile($path)
     {
         $this->file = $path;
+
+        $this->createLogFileIfMissing();
+
+        return $this;
+    }
+
+    public function createIfMissing(): self
+    {
+        $this->shouldCreateMissingLogFile = true;
 
         return $this;
     }
@@ -313,5 +324,18 @@ class EnhancedTailCommand extends Command
             str_contains($line, '/vendor/') && !Str::isMatch("/BoundMethod\.php\([0-9]+\): App/", $line)
             ||
             str_ends_with($line, '{main}');
+    }
+
+    protected function isLogFileMissing(): bool
+    {
+        return !is_null($this->file) && !file_exists($this->file);
+    }
+
+    protected function createLogFileIfMissing(): bool
+    {
+        if ($this->shouldCreateMissingLogFile && $this->isLogFileMissing()) {
+            return touch($this->file);
+        }
+        return true;
     }
 }
