@@ -1,0 +1,54 @@
+[?1049h[!p[?3;4l[4l>[4l[?1h=[0m(B[1;41r[H[2J[H[2J[?25l[H[2J[36m[40m[1mngrok[0m[30m[40m                                                                                                               [39m[49m[37m[40m(Ctrl+C to quit)[39m[49m[30m[40m
+                                                                                                                                    [39m[49m[36m[40m
+Session Status                connecting[39m[49m[30m[40m                                                                                            [39m[49m[37m[40m
+Version                       3.12.1[39m[49m[30m[40m                                                                                                [39m[49m[37m[40m
+Web Interface                 http://127.0.0.1:4040[39m[49m[30m[40m                                                                                 
+                                                                                                                                    [39m[49m[37m[40m
+Connections                   ttl     opn     rt1     rt5     p50     p90     [39m[49m[30m[40m                                                      [39m[49m[37m[40m
+                              0       0       0.00    0.00    0.00    0.00    [39m[49m[30m[40m                                                      
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    [39m[49m[35m[40m[3;1H��️ Protect endpoints w/ IP Intelligence: https://ngrok.com/r/ipintel[39m[49m[30m[40m
+                                    [39m[49m[32m[40m
+Session Status                online[39m[49m[30m[40m               [39m[49m[37m[40m
+Account                       Aaron Francis (Plan: Personal)[39m[49m[33m[40m
+Update                        update available (version 3.19.1, Ctrl-U to update)[39m[49m[37m[40m
+Version[23C3.12.1[39m[49m[30m[40m                                          [39m[49m[37m[40m
+Region                        United States (us)
+Web Interface                 http://127.0.0.1:4040
+
+Connections                   ttl     opn     rt1     rt5     p50     p90     
+                              0       0       0.00    0.00    0.00    0.00    [2AForwarding                    https://369943108eb2.ngrok.app -> http://localhost:8080[39m[49m[30m[40m
+                                                                              [39m[49m[37m[40m
+Connections[19Cttl[5Copn[5Crt1 [4Crt5 [4Cp50 [4Cp90 
+                              0       0       0.00    0.00    0.00    0.00    

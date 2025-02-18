@@ -13,7 +13,6 @@ use Carbon\CarbonImmutable;
 use Chewie\Concerns\CreatesAnAltScreen;
 use Chewie\Concerns\Loops;
 use Chewie\Concerns\SetsUpAndResets;
-use Chewie\Input\KeyPressListener;
 use Illuminate\Support\Collection;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\Terminal;
@@ -24,6 +23,7 @@ use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
 use SoloTerm\Solo\Support\Frames;
+use SoloTerm\Solo\Support\KeyPressListener;
 use SoloTerm\Solo\Support\Screen;
 
 class Dashboard extends Prompt
@@ -159,7 +159,7 @@ class Dashboard extends Prompt
 
     public function rebindHotkeys()
     {
-        $this->listener->clearExisting();
+        $this->listener->clear();
 
         collect(Solo::hotkeys())
             ->merge($this->currentCommand()->allHotkeys())

@@ -16,19 +16,13 @@ class DarkTheme extends LightTheme
     | Tabs
     |--------------------------------------------------------------------------
     */
-    public function tabFocused(string $text): string
+    public function tabFocused(string $text, string $state): string
     {
-        return $this->bgWhite($this->black($text));
-    }
+        $indicator = $this->tabIndicator($state);
 
-    public function tabBlurred(string $text): string
-    {
-        return $this->dim($text);
-    }
-
-    public function tabStopped(string $text): string
-    {
-        return ' ' . $this->strikethrough(trim($text)) . ' ';
+        return $this->bgWhite(
+            $indicator . $this->black(ltrim($text))
+        );
     }
 
     /*
@@ -39,6 +33,18 @@ class DarkTheme extends LightTheme
     public function logsPaused(string $text): string
     {
         return $this->yellow($text);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Text
+    |--------------------------------------------------------------------------
+    */
+    public function invisible(string $text): string
+    {
+        // Not all terminals support invisible mode, so we'll make
+        // the text black and invisible, for the best odds.
+        return "\e[8m" . $this->black($text) . "\e[28m";
     }
 
     /*

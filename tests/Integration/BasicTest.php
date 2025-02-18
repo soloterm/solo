@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Tests\Integration;
 
 use Log;
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Facades\Solo as SoloAlias;
 use Str;
 
 class BasicTest extends Base
@@ -22,7 +21,8 @@ class BasicTest extends Base
         $actions = [
             function (string $ansi, string $plain) {
                 $this->assertStringContainsString('Stopped', $plain);
-                $this->assertStringContainsString("\e[9mAbout\e[29m", $ansi);
+                // Red
+                $this->assertStringContainsString("\e[0;31;40m•", $ansi);
             },
         ];
 
@@ -37,22 +37,25 @@ class BasicTest extends Base
     public function stop_command_test()
     {
         $actions = [
-            // Assert that the Logs tab is not crossed out
             function (string $ansi, string $plain) {
-                $this->assertStringNotContainsString("\e[9mLogs\e[29m", $ansi);
+                // Green
+                $this->assertStringContainsString("\e[0;32;40m•", $ansi);
                 $this->assertStringContainsString(' Running: tail ', $plain);
             },
             // Press the stop hotkey
             's',
-            // Assert that the Logs tab is crossed out and it says stopped
+            // Assert that the Logs tab is stopped
             function (string $ansi, string $plain) {
-                $this->assertStringContainsString("\e[9mLogs\e[29m", $ansi);
+                // Red
+                $this->assertStringContainsString("\e[0;31;40m•", $ansi);
                 $this->assertStringContainsString(' Stopped: tail ', $plain);
             },
         ];
 
         $this->runSolo($actions, function () {
-            SoloAlias::addCommands([
+            config()->set('solo.theme', 'light');
+
+            config()->set('solo.commands', [
                 'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log')
             ]);
         });

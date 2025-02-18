@@ -185,7 +185,7 @@ It lives in a custom `MakeCommand` class.
 
 ### `solo:dumps`
 
-Solo also ships with a custom "[Dump Server](https://symfony.com/doc/current/components/var_dumper.html)" that will intercept `dump` commands from your code and show them in Solo instead of inline. You can run this as a normal artisan command via `php artisan solo:make`.
+Solo also ships with a custom "[Dump Server](https://symfony.com/doc/current/components/var_dumper.html)" that will intercept `dump` commands from your code and show them in Solo instead of inline. You can run this as a normal artisan command via `php artisan solo:dumps`.
 
 ## FAQ
 

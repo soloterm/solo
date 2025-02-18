@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Tests\Integration;
 
 use Closure;
+use Generator;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Process\ProcessResult;
 use Laravel\Prompts\Key;
@@ -67,7 +68,7 @@ abstract class Base extends TestCase
         $terminal = new Terminal;
         $terminal->initDimensions();
 
-        $this->width = max($terminal->cols(), 150);
+        $this->width = $terminal->cols();
         $this->height = $terminal->lines() - $this->reservedLines;
 
         parent::setUp();
@@ -149,11 +150,6 @@ abstract class Base extends TestCase
                 if (str_contains($buffer, $move)) {
                     $this->previousFrame = $this->frame;
 
-                    // There are potentially some assertions that are waiting on a
-                    // new frame to render. Once we're sure we've got a brand
-                    // new frame, go ahead and call those functions.
-                    $this->callNewFrameCallbacks($this->previousFrame);
-
                     // Move all the way up, but then down four lines.
                     $this->frame = "\e[1000F\e[{$this->reservedLines}B" . last(explode($move, $buffer));
                 } else {
@@ -166,7 +162,7 @@ abstract class Base extends TestCase
     {
         $millisecondsSinceLastAction = 0;
         $millisecondsBetweenFrames = 10;
-        $millisecondsBetweenActions = 1000;
+        $millisecondsBetweenActions = 500;
 
         while ($this->process->running()) {
             // Move up 1000 rows to column 1
@@ -178,11 +174,14 @@ abstract class Base extends TestCase
             // Move back up
             $this->write("\e[" . ($this->reservedLines - 1) . 'A');
 
-            // @TODO more status?
             $this->write('Running test: ' . $this->name());
             $this->write("\n");
             $this->write(count($actions) + 1 . ' actions remaining');
-            $this->write("\n\n\n");
+            $this->write("\n");
+            $this->write('Upcoming action: ' . json_encode(head($actions)));
+            $this->write("\n");
+            // $this->write('In: ' . ($millisecondsBetweenActions - $millisecondsSinceLastAction));
+            $this->write("\n");
 
             if ($this->newBuffer) {
                 $this->newBuffer = false;
@@ -202,7 +201,11 @@ abstract class Base extends TestCase
             // are waiting. It's possible that the underlying process hasn't sent
             // any new output and therefore we haven't triggered the new frame
             // callbacks. This ensures we call them before we move on.
-            $this->callNewFrameCallbacks($this->frame);
+            $added = $this->callNewFrameCallbacks($this->frame);
+
+            if ($added) {
+                array_unshift($actions, $added);
+            }
 
             if (count($actions)) {
                 $action = array_shift($actions);
@@ -238,10 +241,22 @@ abstract class Base extends TestCase
 
     protected function callNewFrameCallbacks($frame)
     {
+        $additionalAction = null;
+        $callbacks = [];
+
         foreach ($this->newFrameCallbacks as $cb) {
-            $cb($frame, AnsiAware::plain($frame));
+            $result = $cb($frame, AnsiAware::plain($frame));
+
+            if ($result instanceof Generator) {
+                if ($result->valid()) {
+                    $additionalAction = $result->current();
+                    $callbacks[] = $cb;
+                }
+            }
         }
 
-        $this->newFrameCallbacks = [];
+        $this->newFrameCallbacks = $callbacks;
+
+        return $additionalAction;
     }
 }
