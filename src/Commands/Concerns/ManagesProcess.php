@@ -56,23 +56,7 @@ trait ManagesProcess
             ->pty()
             ->input($this->input);
 
-        if ($this->workingDirectory && !is_dir($this->workingDirectory)) {
-            $errorBox = new ErrorBox([
-                "Directory not found: {$this->workingDirectory}",
-                'Please check the working directory in config'
-            ]);
-
-            $this->addOutput($errorBox->render());
-
-            return $process->command('')
-                ->input(null);
-        }
-
-        if ($this->workingDirectory && is_dir($this->workingDirectory)) {
-            $this->withProcess(function (PendingProcess $process) {
-                $process->path($this->workingDirectory);
-            });
-        }
+        $this->setWorkingDirectory();
 
         if ($this->processModifier) {
             call_user_func($this->processModifier, $process);
@@ -87,6 +71,32 @@ trait ManagesProcess
             'LINES' => $this->scrollPaneHeight(),
             ...$process->environment
         ]);
+    }
+
+    protected function setWorkingDirectory(): void
+    {
+        if (!$this->workingDirectory) {
+            return;
+        }
+
+        if (is_dir($this->workingDirectory)) {
+            $this->withProcess(function (PendingProcess $process) {
+                $process->path($this->workingDirectory);
+            });
+
+            return;
+        }
+
+        $errorBox = new ErrorBox([
+            "Directory not found: {$this->workingDirectory}",
+            'Please check the working directory in config.'
+        ]);
+
+        $this->addOutput($errorBox->render());
+
+        $this->withProcess(function (PendingProcess $process) {
+            return $process->command('')->input(null);
+        });
     }
 
     public function sendInput(mixed $input)
