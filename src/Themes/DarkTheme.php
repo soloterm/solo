@@ -16,35 +16,13 @@ class DarkTheme extends LightTheme
     | Tabs
     |--------------------------------------------------------------------------
     */
-    public function tabFocused(string $text): string
+    public function tabFocused(string $text, string $state): string
     {
-        return $this->bgWhite($this->black($text));
-    }
+        $indicator = $this->tabIndicator($state);
 
-    public function tabBlurred(string $text): string
-    {
-        return $this->dim($text);
-    }
-
-    public function tabStopped(string $text): string
-    {
-        $text = trim($text);
-
-        return $this->red('•') . $this->dim($text . ' ');
-    }
-
-    public function tabRunning(string $text): string
-    {
-        $text = trim($text);
-
-        return $this->green('•') . $this->dim($text . ' ');
-    }
-
-    public function tabPaused(string $text): string
-    {
-        $text = trim($text);
-
-        return $this->yellow('•') . $this->dim($text . ' ');
+        return $this->bgWhite(
+            $indicator . $this->black(ltrim($text))
+        );
     }
 
     /*

@@ -6,5 +6,4 @@
 
 return [
     'theme' => 'light',
-
 ];

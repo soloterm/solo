@@ -13,6 +13,7 @@ use Chewie\Concerns\Aligns;
 use Chewie\Concerns\DrawsHotkeys;
 use Chewie\Output\Util;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Prompts\Themes\Default\Concerns\DrawsScrollbars;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
@@ -184,19 +185,11 @@ class Renderer extends PromptsRenderer
 
     protected function styleTab(Command $command, string $name): string
     {
-        if ($command->processStopped()) {
-            $name = $this->theme->tabStopped($name);
-        }
+        $state = $command->processRunning()
+            ? ($command->paused ? 'paused' : 'running')
+            : 'stopped';
 
-        if ($command->processRunning() && !$command->paused) {
-            $name = $this->theme->tabRunning($name);
-        }
-
-        if ($command->processRunning() && $command->paused) {
-            $name = $this->theme->tabPaused($name);
-        }
-
-        return $command->isFocused() ? $this->theme->tabFocused($name) : $this->theme->tabBlurred($name);
+        return $command->isFocused() ? $this->theme->tabFocused($name, $state) : $this->theme->tabBlurred($name, $state);
     }
 
     protected function renderProcessState(): void
@@ -265,7 +258,7 @@ class Renderer extends PromptsRenderer
         // Try to scroll the content, which may or may not have an
         // effect, depending on how much content there is.
         $scrolled = $this->scrollbar(
-            // Subtract 1 for the left box border and 1 for the space after it.
+        // Subtract 1 for the left box border and 1 for the space after it.
             $visible, $start, $allowedLines, $wrappedLines->count(), $this->width - 2
         );
 

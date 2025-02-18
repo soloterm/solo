@@ -16,15 +16,9 @@ interface Theme
     | Tabs
     |--------------------------------------------------------------------------
     */
-    public function tabFocused(string $text): string;
+    public function tabFocused(string $text, string $state): string;
 
-    public function tabBlurred(string $text): string;
-
-    public function tabStopped(string $text): string;
-
-    public function tabRunning(string $text): string;
-
-    public function tabPaused(string $text): string;
+    public function tabBlurred(string $text, string $state): string;
 
     public function tabMore(string $text): string;
 
