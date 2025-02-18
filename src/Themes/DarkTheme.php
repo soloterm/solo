@@ -43,6 +43,18 @@ class DarkTheme extends LightTheme
 
     /*
     |--------------------------------------------------------------------------
+    | Text
+    |--------------------------------------------------------------------------
+    */
+    public function invisible(string $text): string
+    {
+        // Not all terminals support invisible mode, so we'll make
+        // the text black and invisible, for the best odds.
+        return "\e[8m" . $this->black($text) . "\e[28m";
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Process
     |--------------------------------------------------------------------------
     */

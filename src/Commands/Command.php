@@ -11,12 +11,12 @@ namespace SoloTerm\Solo\Commands;
 
 use Chewie\Concerns\Ticks;
 use Chewie\Contracts\Loopable;
-use Chewie\Input\KeyPressListener;
 use Illuminate\Support\Collection;
 use SoloTerm\Solo\Commands\Concerns\ManagesProcess;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Hotkeys\KeyHandler;
 use SoloTerm\Solo\Support\AnsiAware;
+use SoloTerm\Solo\Support\KeyPressListener;
 use SoloTerm\Solo\Support\Screen;
 use SplQueue;
 
@@ -168,12 +168,14 @@ class Command implements Loopable
     */
     public function dd()
     {
-        $this->wrappedLines()->map(fn($line) => print_r(json_encode($line)));
+        $this->wrappedLines()->dd();
         exit();
     }
 
     public function addOutput($text)
     {
+        $text = str_replace('[screen is terminating]', '', $text);
+
         $this->screen->write($text);
     }
 
@@ -300,7 +302,7 @@ class Command implements Loopable
         });
     }
 
-    public function wrapLine($line, $width = null, $continuationIndent = 0): array
+    public function wrapLine($line, $width = null, $continuationIndent = 0, $recursive = false): array
     {
         $defaultWidth = $this->scrollPaneWidth();
 
@@ -336,11 +338,11 @@ class Command implements Loopable
             }
         }
 
-        $rest = $indent . implode(PHP_EOL, $exploded);
+        $rest = $indent . ltrim(implode('', $exploded));
 
         return [
             $first,
-            ...$this->wrapLine($rest, $width, $continuationIndent)
+            ...$this->wrapLine($rest, $width, $continuationIndent, true)
         ];
     }
 
@@ -348,5 +350,19 @@ class Command implements Loopable
     {
         // Primarily here for any subclasses.
         return $lines;
+    }
+
+    public static function __set_state(array $data)
+    {
+        $instance = new static;
+
+        // Set all the properties on the instance.
+        foreach ($data as $key => $value) {
+            $reflection = new \ReflectionProperty($instance, $key);
+            $reflection->setAccessible(true);
+            $reflection->setValue($instance, $value);
+        }
+
+        return $instance;
     }
 }

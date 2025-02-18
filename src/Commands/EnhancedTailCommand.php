@@ -15,13 +15,17 @@ use Laravel\Prompts\Concerns\Colors;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
+use SoloTerm\Solo\Support\AnsiAware;
+use SoloTerm\Solo\Support\BaseConverter;
 use SoloTerm\Solo\Support\Screen;
 
 class EnhancedTailCommand extends Command
 {
     use Colors, InteractsWithStrings;
 
-    protected bool $hideVendor = true;
+    protected bool $hideVendor = false;
+
+    protected bool $wrapLines = true;
 
     protected int $compressed = 0;
 
@@ -29,7 +33,9 @@ class EnhancedTailCommand extends Command
 
     protected string $file;
 
-    private string $invisibleVendorMark = "\e[8mV\e[28m";
+    protected string $invisibleVendorMark;
+
+    protected string $invisibleWrapMark;
 
     public static function file($path)
     {
@@ -43,6 +49,12 @@ class EnhancedTailCommand extends Command
         return $this;
     }
 
+    public function beforeStart(): void
+    {
+        $this->invisibleVendorMark = Solo::theme()->invisible('V');
+        $this->invisibleWrapMark = Solo::theme()->invisible('W');
+    }
+
     /**
      * @return array<string, Hotkey>
      */
@@ -51,6 +63,9 @@ class EnhancedTailCommand extends Command
         return [
             'vendor' => Hotkey::make('v', $this->toggleVendorFrames(...))
                 ->label($this->hideVendor ? 'Show Vendor' : 'Hide Vendor'),
+
+            'wrap' => $this->file ? Hotkey::make('w', $this->toggleWrappedLines(...))
+                ->label($this->wrapLines ? 'Prevent wrapping' : 'Allow wrapping  ') : null,
 
             'truncate' => $this->file ? Hotkey::make('t', $this->truncateFile(...))
                 ->label('Truncate') : null
@@ -81,31 +96,46 @@ class EnhancedTailCommand extends Command
         $this->clear();
     }
 
-    protected function toggleVendorFrames()
+    protected function toggleWrappedLines()
     {
-        $this->hideVendor ? $this->showVendorFrames() : $this->hideVendorFrames();
-        $this->hideVendor = !$this->hideVendor;
+        $this->wrapLines ? $this->prepareToDisableWrapping() : $this->prepareToEnableWrapping();
+        $this->wrapLines = !$this->wrapLines;
     }
 
-    protected function showVendorFrames()
+    protected function prepareToEnableWrapping()
     {
         $lines = $this->wrappedLines();
         $cursor = $this->scrollIndex;
+        $this->pendingScrollIndex = $this->scrollIndex;
 
         while ($cursor >= 0) {
-            $line = $lines->get($cursor);
+            $line = $lines->get($cursor - 1);
+
+            $pattern = str($this->dim(' ...') . Solo::theme()->invisible('XXX'))->before('XXX')->value();
 
             // Invisible compressed line count.
-            if ($count = Str::match("/\\e\[8m\[(\d+)]\\e\[28m/", $line)) {
-                $this->pendingScrollIndex ??= $this->scrollIndex + intval($count);
+            if (Str::contains($line, $pattern)) {
+                $count = str($line)->afterLast($pattern)->before("\e")->value();
+                $count = BaseConverter::toInt($count);
+
+                $this->pendingScrollIndex += $count;
             }
 
-            // Need to offset for all the vendor lines that do remain. For example
-            // if we've compressed 50 lines into 5, we can't offset the scroll
-            // index by 50, because there are still 5 remaining. So we figure
-            // out how many total lines have been compressed (50) and
-            // how many remain (5).
-            if ($this->isVendorFrame($line)) {
+            $cursor--;
+        }
+
+    }
+
+    protected function prepareToDisableWrapping()
+    {
+        $lines = $this->wrappedLines();
+        $cursor = $this->scrollIndex;
+        $this->pendingScrollIndex = $this->scrollIndex;
+
+        while ($cursor >= 0) {
+            $line = $lines->get($cursor - 1);
+
+            if (Str::contains($line, $this->invisibleWrapMark)) {
                 $this->pendingScrollIndex -= 1;
             }
 
@@ -113,7 +143,67 @@ class EnhancedTailCommand extends Command
         }
     }
 
-    protected function hideVendorFrames()
+    public function wrapLine($line, $width = null, $continuationIndent = 0, $recursive = false): array
+    {
+        $width = $width ?? 0;
+        $width -= 2;
+
+        $wrapped = parent::wrapLine($line, $width, $continuationIndent, $recursive);
+
+        if (!$this->wrapLines && count($wrapped) > 1 && !$recursive) {
+            $width += 2;
+            $remainder = $this->dim(' ...') . Solo::theme()->invisible(BaseConverter::toString(count($wrapped) - 1));
+            $len = AnsiAware::mb_strlen($remainder);
+
+            $wrapped = parent::wrapLine($wrapped[0], (int) $width - $len, $continuationIndent);
+
+            return [$wrapped[0] . $remainder];
+        }
+
+        if (count($wrapped) > 1) {
+            $wrapped[1] .= $this->invisibleWrapMark;
+        }
+
+        return $wrapped;
+    }
+
+    protected function toggleVendorFrames()
+    {
+        $this->hideVendor ? $this->prepareToShowVendorFrames() : $this->prepareToHideVendorFrames();
+        $this->hideVendor = !$this->hideVendor;
+    }
+
+    protected function prepareToShowVendorFrames()
+    {
+        $lines = $this->wrappedLines();
+        $cursor = $this->scrollIndex;
+        $this->pendingScrollIndex = $this->scrollIndex;
+
+        $compressed = null;
+        while ($cursor >= 0) {
+            $line = $lines->get($cursor);
+
+            // Invisible compressed line count.
+            if ($count = Str::match("/\[C:(\d+)]/", $line)) {
+                $compressed ??= intval($count);
+            }
+
+            // Need to offset for all the vendor lines that do remain. For example
+            // if we've compressed 50 lines into 5, we can't offset the scroll
+            // index by 50, because there are still 5 remaining. So we figure
+            // out how many total lines have been compressed (50) and
+            // how many remain (5).
+            if ($this->isCompressedVendorFrame($line)) {
+                $this->pendingScrollIndex -= 1;
+            }
+
+            $cursor--;
+        }
+
+        $this->pendingScrollIndex += $compressed;
+    }
+
+    protected function prepareToHideVendorFrames()
     {
         $lines = $this->wrappedLines();
         $cursor = $this->scrollIndex;
@@ -215,7 +305,7 @@ class EnhancedTailCommand extends Command
 
         $exception = array_map(
             fn($line) => ' ' . Solo::theme()->exception($line),
-            $this->wrapLine($lines[1], -1)
+            $this->wrapLine($lines[1], -1, 1)
         );
 
         return [
@@ -269,7 +359,7 @@ class EnhancedTailCommand extends Command
             // Add the running total, invisibly, to this line. When we turn vendor
             // frames back on we search through the lines above the current index
             // to figure out how many compressed vendor frames there are.
-            $invisibleCount = "\e[8m[$this->compressed]\e[28m";
+            $invisibleCount = Solo::theme()->invisible("[C:$this->compressed]");
 
             // We also add the invisible vendor mark to denote that these
             // are vendor frames, albeit collapsed ones.
@@ -308,10 +398,15 @@ class EnhancedTailCommand extends Command
     protected function isVendorFrame($line)
     {
         return
-            str_contains($line, $this->invisibleVendorMark)
+            $this->isCompressedVendorFrame($line)
             ||
             str_contains($line, '/vendor/') && !Str::isMatch("/BoundMethod\.php\([0-9]+\): App/", $line)
             ||
             str_ends_with($line, '{main}');
+    }
+
+    protected function isCompressedVendorFrame($line)
+    {
+        return str_contains($line, $this->invisibleVendorMark);
     }
 }

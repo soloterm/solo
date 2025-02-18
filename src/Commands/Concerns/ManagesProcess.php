@@ -12,6 +12,8 @@ namespace SoloTerm\Solo\Commands\Concerns;
 use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Str;
 use ReflectionClass;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
@@ -43,9 +45,19 @@ trait ManagesProcess
 
         $command = explode(' ', $this->command);
 
+        // ??
+        // alias screen='TERM=xterm-256color screen'
+        // https://superuser.com/questions/800126/gnu-screen-changes-vim-syntax-highlighting-colors
+        // https://github.com/derailed/k9s/issues/2810
+
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            ->command($command)
+            // ->command($command)
+            ->command([
+                'bash',
+                '-c',
+                "stty cols {$this->scrollPaneWidth()} rows {$this->scrollPaneHeight()} && screen -q " . $this->command,
+            ])
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)
@@ -122,43 +134,20 @@ trait ManagesProcess
         return $this;
     }
 
+    public function beforeStart()
+    {
+        //
+    }
+
     public function start(): void
     {
+        $this->beforeStart();
+
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
-            // After many, many hours of frustration I've figured out that for some reason the max
-            // number of bytes that come through at any time is 1024. I think it has to do with
-            // stdio buffering (https://www.pixelbeat.org/programming/stdio_buffering).
-
-            // According to that article, it could be 1024 or 4096, depending on whether a terminal
-            // is connected or not. We'll check both along with 2048. If there are more than 1024
-            // bytes in stdout, they might end up in stderr! No idea why. Not sure if that's
-            // a Symfony thing or just normal system stuff. Regardless, for that reason we
-            // don't differentiate between stdout and stderr here and listen for both.
-
-            // So when we do get a chunk that seems like it might have a continuation, we need
-            // to buffer it, because there's more output coming right behind it. If we don't
-            // buffer, we could splice a multibyte character or an ANSI code. Much effort
-            // went into fixing byte splices, but ANSI splices are way tougher. Checking
-            // if it's a perfect multiple of 1024 seems to be foolproof. Hopefully.
-            if (strlen($buffer) % 1024 === 0) {
-                $this->partialBuffer .= $buffer;
-
-                // @TODO add a timer to just force the partial buffer through, in case
-                // it's a legit block of 1024 bytes with nothing coming after.
-                return;
-            }
-
-            $this->addOutput($this->partialBuffer . $buffer);
-            $this->partialBuffer = '';
-
-            // 5% chance of clearing the buffer. Hopefully this helps save memory.
-            // @link https://github.com/aarondfrancis/solo/issues/33
-            if (rand(1, 100) < 5) {
-                $type === SymfonyProcess::OUT ? $this->clearStdOut() : $this->clearStdErr();
-            }
+            $this->partialBuffer .= $buffer;
         });
 
-        $this->sendSizeViaStty();
+        //         $this->sendSizeViaStty();
     }
 
     public function whenStopping()
@@ -236,6 +225,10 @@ trait ManagesProcess
 
             $device = $matches[1];
 
+            if ($device === '/dev/ttys000') {
+                continue;
+            }
+
             exec(sprintf(
                 'stty rows %d cols %d < %s',
                 $this->scrollPaneHeight(),
@@ -249,18 +242,15 @@ trait ManagesProcess
 
     protected function clearStdOut()
     {
-        $this->callPrivateMethodOnSymfonyProcess('clearOutput');
+        $this->withSymfonyProcess(function (SymfonyProcess $process) {
+            $process->clearOutput();
+        });
     }
 
     protected function clearStdErr()
     {
-        $this->callPrivateMethodOnSymfonyProcess('clearErrorOutput');
-    }
-
-    protected function callPrivateMethodOnSymfonyProcess($method, array $args = []): mixed
-    {
-        return $this->withSymfonyProcess(function (SymfonyProcess $process) use ($method, $args) {
-            return (new ReflectionClass(SymfonyProcess::class))->getMethod($method)->invoke($process, ...$args);
+        $this->withSymfonyProcess(function (SymfonyProcess $process) {
+            $process->clearErrorOutput();
         });
     }
 
@@ -326,12 +316,74 @@ trait ManagesProcess
         $this->afterTerminateCallbacks = [];
     }
 
-    protected function collectIncrementalOutput()
+    protected function collectIncrementalOutput(): void
     {
+        $before = strlen($this->partialBuffer);
+
         // A bit of a hack, but there's no other way in. Process is a Laravel InvokedProcess.
         // Calling `running` on it defers to the Symfony process `isRunning` method. That
         // method calls a protected method `updateStatus` which calls a private method
         // `readPipes` which invokes the output callback, adding it to our buffer.
         $this->process?->running();
+
+        $after = strlen($this->partialBuffer);
+
+        if (!$before && !$after) {
+            return;
+        }
+
+        // No more data came out, so let's flush the whole thing.
+        if ($before === $after) {
+            $write = $this->partialBuffer;
+
+            // @link https://github.com/aarondfrancis/solo/issues/33
+            $this->clearStdOut();
+            $this->clearStdErr();
+        } elseif ($after > 10240) {
+            if (Str::contains($this->partialBuffer, "\n")) {
+                // We're over the limit, so look for a safe spot to cut, starting with newlines.
+                $write = Str::beforeLast($this->partialBuffer, "\n");
+            } elseif (Str::contains($this->partialBuffer, "\e")) {
+                // If there aren't any, let's cut right before an ANSI code so we don't splice it.
+                $write = Str::beforeLast($this->partialBuffer, "\e");
+            } else {
+                // Otherwise, we'll just slice anywhere that's safe.
+                $write = $this->sliceAtUTF8Boundary($this->partialBuffer);
+            }
+        } else {
+            return;
+        }
+
+        $this->partialBuffer = substr($this->partialBuffer, strlen($write));
+        $this->addOutput($write);
+    }
+
+    public function sliceAtUTF8Boundary(string $input): string
+    {
+        $len = strlen($input);
+
+        // Walk backward from the end, to find a safe UTF-8 start
+        $i = $len - 1;
+        while ($i >= 0) {
+            $byteVal = ord($input[$i]);
+
+            // If this is a leading byte or ASCII, we're good
+            // Leading bytes match:
+            //   0xxxxxxx (ASCII)
+            //   110xxxxx (2-byte start)
+            //   1110xxxx (3-byte start)
+            //   11110xxx (4-byte start)
+            // etc.
+            if (($byteVal & 0b11000000) != 0b10000000) {
+                // This is not a continuation byte (i.e. 10xxxxxx),
+                // so it's a valid UTF-8 start boundary
+                break;
+            }
+
+            $i--;
+        }
+
+        // Now $i is either -1 (we fell off the start) or at the start of a codepoint
+        return substr($input, 0, $i + 1);
     }
 }

@@ -42,6 +42,8 @@ interface Theme
 
     public function exception(string $text): string;
 
+    public function invisible(string $text): string;
+
     /*
     |--------------------------------------------------------------------------
     | Process

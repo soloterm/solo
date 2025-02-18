@@ -9,12 +9,12 @@
 
 namespace SoloTerm\Solo\Hotkeys;
 
-use Chewie\Input\KeyPressListener;
 use Closure;
 use ReflectionFunction;
 use ReflectionParameter;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Prompt\Dashboard;
+use SoloTerm\Solo\Support\KeyPressListener;
 
 class Hotkey
 {
