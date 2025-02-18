@@ -51,7 +51,7 @@ class EnhancedTailCommand extends Command
 
     public function beforeStart(): void
     {
-        $this->createLogFileIfMissing();
+        $this->touchFile();
 
         $this->invisibleVendorMark = Solo::theme()->invisible('V');
         $this->invisibleWrapMark = Solo::theme()->invisible('W');
@@ -96,6 +96,13 @@ class EnhancedTailCommand extends Command
 
         // Clear the logs held in memory.
         $this->clear();
+    }
+
+    protected function touchFile(): void
+    {
+        if (!is_null($this->file) && !file_exists($this->file)) {
+            touch($this->file);
+        }
     }
 
     protected function toggleWrappedLines()
@@ -405,19 +412,6 @@ class EnhancedTailCommand extends Command
             str_contains($line, '/vendor/') && !Str::isMatch("/BoundMethod\.php\([0-9]+\): App/", $line)
             ||
             str_ends_with($line, '{main}');
-    }
-
-    protected function isLogFileMissing(): bool
-    {
-        return !is_null($this->file) && !file_exists($this->file);
-    }
-
-    protected function createLogFileIfMissing(): bool
-    {
-        if ($this->isLogFileMissing()) {
-            return touch($this->file);
-        }
-        return true;
     }
 
     protected function isCompressedVendorFrame($line)
