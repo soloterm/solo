@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Tests\Integration;
 
 use Log;
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Facades\Solo as SoloAlias;
 use Str;
 
 class BasicTest extends Base

@@ -3,8 +3,8 @@
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
-use SoloTerm\Solo\Hotkeys as Hotkeys;
-use SoloTerm\Solo\Themes as Themes;
+use SoloTerm\Solo\Hotkeys;
+use SoloTerm\Solo\Themes;
 
 // Solo may not (should not!) exist in prod, so we have to
 // check here first to see if it's installed.
