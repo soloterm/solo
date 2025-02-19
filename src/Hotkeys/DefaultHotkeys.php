@@ -80,12 +80,20 @@ class DefaultHotkeys implements HotkeyProvider
                 ->label('Scroll down')
                 ->invisible(),
 
-            'page_up' => Hotkey::make(Key::SHIFT_UP, KeyHandler::PageUp)
+            'page_up' => Hotkey::make([Key::SHIFT_UP, Key::PAGE_UP], KeyHandler::PageUp)
                 ->label('Page up')
                 ->invisible(),
 
-            'page_down' => Hotkey::make(Key::SHIFT_DOWN, KeyHandler::PageDown)
+            'page_down' => Hotkey::make([Key::SHIFT_DOWN, KEY::PAGE_DOWN], KeyHandler::PageDown)
                 ->label('Page down')
+                ->invisible(),
+
+            'home' => Hotkey::make(Key::HOME, KeyHandler::Home)
+                ->label('Home')
+                ->invisible(),
+
+            'end' => Hotkey::make(Key::END, KeyHandler::End)
+                ->label('End')
                 ->invisible(),
 
             // 'dd' => Hotkey::make('d', KeyHandler::DD)

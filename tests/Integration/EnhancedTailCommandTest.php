@@ -70,4 +70,25 @@ class EnhancedTailCommandTest extends Base
             ]);
         });
     }
+
+    #[Test]
+    public function home_end_test()
+    {
+        $actions = [
+            head(Key::HOME),
+            function (string $ansi, string $plain) {
+                $this->assertStringContainsString('_marker_home_', $plain);
+            },
+            head(Key::END),
+            function (string $ansi, string $plain) {
+                $this->assertStringContainsString('_marker_end_', $plain);
+            },
+        ];
+
+        $this->runSolo($actions, function () {
+            config()->set('solo.commands', [
+                'Logs' => EnhancedTailCommand::file(package_path('tests/Fixtures/home-end.log'))
+            ]);
+        });
+    }
 }
