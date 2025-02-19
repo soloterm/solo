@@ -91,5 +91,4 @@ class EnhancedTailCommandTest extends Base
             ]);
         });
     }
-
 }
