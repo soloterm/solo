@@ -9,6 +9,7 @@
             "email": "aarondfrancis@gmail.com"
         }
     ],
+    "minimum-stability": "dev",
     "require": {
         "php": "^8.2",
         "illuminate/support": "^10|^11|^12",
