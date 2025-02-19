@@ -23,26 +23,32 @@ class LightTheme implements Theme
     | Tabs
     |--------------------------------------------------------------------------
     */
-    public function tabFocused(string $text): string
+    public function tabFocused(string $text, string $state): string
     {
-        return $this->bgBlack($this->white($text));
+        $indicator = $this->tabIndicator($state);
+
+        return $this->bgBlack(
+            $indicator . $this->white(ltrim($text))
+        );
     }
 
-    public function tabBlurred(string $text): string
+    public function tabBlurred(string $text, string $state): string
     {
-        return $text;
-    }
-
-    public function tabStopped(string $text): string
-    {
-        $text = trim($text);
-
-        return $this->dim(' ' . $this->strikethrough($text) . ' ');
+        return $this->tabIndicator($state) . $this->dim(ltrim($text));
     }
 
     public function tabMore(string $text): string
     {
         return $this->dim($text);
+    }
+
+    public function tabIndicator(string $state): string
+    {
+        return match ($state) {
+            'running' => $this->green('•'),
+            'paused' => $this->yellow('•'),
+            'stopped' => $this->red('•'),
+        };
     }
 
     /*
@@ -73,6 +79,13 @@ class LightTheme implements Theme
     public function exception(string $text): string
     {
         return $this->red($text);
+    }
+
+    public function invisible(string $text): string
+    {
+        // Not all terminals support invisible mode, so we'll make
+        // the text white and invisible, for the best odds.
+        return "\e[8m" . $this->white($text) . "\e[28m";
     }
 
     /*

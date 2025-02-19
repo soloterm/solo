@@ -13,6 +13,7 @@ use Chewie\Concerns\Aligns;
 use Chewie\Concerns\DrawsHotkeys;
 use Chewie\Output\Util;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Prompts\Themes\Default\Concerns\DrawsScrollbars;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
@@ -184,11 +185,11 @@ class Renderer extends PromptsRenderer
 
     protected function styleTab(Command $command, string $name): string
     {
-        if ($command->processStopped()) {
-            $name = $this->theme->tabStopped($name);
-        }
+        $state = $command->processRunning()
+            ? ($command->paused ? 'paused' : 'running')
+            : 'stopped';
 
-        return $command->isFocused() ? $this->theme->tabFocused($name) : $this->theme->tabBlurred($name);
+        return $command->isFocused() ? $this->theme->tabFocused($name, $state) : $this->theme->tabBlurred($name, $state);
     }
 
     protected function renderProcessState(): void

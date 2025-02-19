@@ -3,8 +3,8 @@
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
-use SoloTerm\Solo\Hotkeys as Hotkeys;
-use SoloTerm\Solo\Themes as Themes;
+use SoloTerm\Solo\Hotkeys;
+use SoloTerm\Solo\Themes;
 
 // Solo may not (should not!) exist in prod, so we have to
 // check here first to see if it's installed.
@@ -54,7 +54,7 @@ return [
 
         // Lazy commands do no automatically start when Solo starts.
         'Dumps' => Command::from('php artisan solo:dumps')->lazy(),
-        'Reverb' => Command::from('php artisan reverb')->lazy(),
+        'Reverb' => Command::from('php artisan reverb:start --debug')->lazy(),
         'Pint' => Command::from('./vendor/bin/pint --ansi')->lazy(),
         'Queue' => Command::from('php artisan queue:work')->lazy(),
         'Tests' => Command::from('php artisan test --colors=always')->lazy(),

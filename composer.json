@@ -9,20 +9,21 @@
             "email": "aarondfrancis@gmail.com"
         }
     ],
+    "minimum-stability": "dev",
     "require": {
         "php": "^8.2",
-        "illuminate/support": "^10|^11",
-        "illuminate/console": "^10|^11",
-        "illuminate/process": "^10|^11",
+        "illuminate/support": "^10|^11|^12",
+        "illuminate/console": "^10|^11|^12",
+        "illuminate/process": "^10|^11|^12",
         "ext-pcntl": "*",
         "ext-posix": "*",
         "laravel/prompts": "^0.1.21|^0.2|^0.3",
         "joetannenbaum/chewie": "^0.1"
     },
     "require-dev": {
-        "illuminate/database": "^10|^11",
+        "illuminate/database": "^10|^11|^12",
         "phpunit/phpunit": "^10.5|^11",
-        "orchestra/testbench": "^8.29|^9.5",
+        "orchestra/testbench": "^8.29|^9.5|^10",
         "laravel/serializable-closure": "^1.3"
     },
     "autoload": {

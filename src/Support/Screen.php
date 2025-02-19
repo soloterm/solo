@@ -106,10 +106,10 @@ class Screen
                 if ($part->command) {
                     $this->handleAnsiCode($part);
                 } else {
-                    Log::error('Unknown ANSI match:', [
-                        'line' => $content,
-                        'part' => $part->raw,
-                    ]);
+                    // Log::error('Unknown ANSI match:', [
+                    //     'line' => $content,
+                    //     'part' => $part->raw,
+                    // ]);
                 }
             } else {
                 $lines = explode(PHP_EOL, $part);

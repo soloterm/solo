@@ -109,8 +109,8 @@ class Manager
      */
     public function hotkeys(): array
     {
-        $bindings = Config::array('solo.keybindings', []);
-        $binding = Config::string('solo.keybinding', 'default');
+        $bindings = $this->getConfigValue('solo.keybindings', []);
+        $binding = $this->getConfigValue('solo.keybinding', 'default');
 
         $hotkeys = Arr::get($bindings, $binding, DefaultHotkeys::class);
 
@@ -127,8 +127,8 @@ class Manager
             return $this->cachedTheme;
         }
 
-        $theme = Config::string('solo.theme', 'light');
-        $themes = Config::array('solo.themes', [
+        $theme = $this->getConfigValue('solo.theme', 'light');
+        $themes = $this->getConfigValue('solo.themes', [
             'light' => LightTheme::class,
         ]);
 
@@ -165,5 +165,18 @@ class Manager
     public function getRenderer(): string
     {
         return $this->renderer;
+    }
+
+    private function getConfigValue(string $key, $default = null)
+    {
+        $value = Config::get($key, $default);
+
+        if (gettype($value) !== gettype($default)) {
+            throw new InvalidArgumentException(
+                sprintf('Configuration value for key [%s] must be a string, %s given.', $key, gettype($value))
+            );
+        }
+
+        return $value;
     }
 }
