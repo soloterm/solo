@@ -88,11 +88,13 @@ class DefaultHotkeys implements HotkeyProvider
                 ->label('Page down')
                 ->invisible(),
 
-            'home' => Hotkey::make(Key::HOME, KeyHandler::Home)
+            // @TODO once we drop support for Laravel 10, we can bump laravel/prompts to 0.3.3 and then use Key::HOME
+            'home' => Hotkey::make(["\e[1~", "\eOH", "\e[H", "\e[7~"], KeyHandler::Home)
                 ->label('Home')
                 ->invisible(),
 
-            'end' => Hotkey::make(Key::END, KeyHandler::End)
+            // @TODO once we drop support for Laravel 10, we can bump laravel/prompts to 0.3.3 and then use Key::END
+            'end' => Hotkey::make(["\e[4~", "\eOF", "\e[F", "\e[8~"], KeyHandler::End)
                 ->label('End')
                 ->invisible(),
 
