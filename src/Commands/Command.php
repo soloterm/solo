@@ -249,7 +249,7 @@ class Command implements Loopable
 
     public function scrollToBottom(): void
     {
-        $this->scrollDown($this->wrappedLines()->count() - $this->scrollPaneHeight());
+        $this->scrollDown(INF);
     }
 
     public function pageDown()
@@ -270,7 +270,7 @@ class Command implements Loopable
 
     public function scrollToTop(): void
     {
-        $this->scrollUp($this->scrollIndex);
+        $this->scrollUp(INF);
     }
 
     /*
