@@ -21,7 +21,7 @@
         "joetannenbaum/chewie": "^0.1"
     },
     "require-dev": {
-        "illuminate/database": "^10|^11",
+        "illuminate/database": "^10|^11|^12",
         "phpunit/phpunit": "^10.5|^11",
         "orchestra/testbench": "^8.29|^9.5|^10",
         "laravel/serializable-closure": "^1.3"
