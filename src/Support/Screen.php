@@ -264,7 +264,7 @@ class Screen
         // on where the cursor started and where it ended.
         $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $startCol, max($startCol, $this->cursorCol - 1));
 
-        if ($remainder !== "") {
+        if ($remainder !== '') {
             $this->newlineWithScroll();
             $this->handlePrintableCharacters($remainder);
         }
@@ -387,8 +387,8 @@ class Screen
 
     protected function handleAbsoluteMove(string $params)
     {
-        if ($params !== "") {
-            [$row, $col] = explode(";", $params);
+        if ($params !== '') {
+            [$row, $col] = explode(';', $params);
             $row = $row === '' ? 1 : intval($row);
             $col = $col === '' ? 1 : intval($col);
         } else {
