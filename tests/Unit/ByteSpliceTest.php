@@ -10,10 +10,41 @@
 namespace SoloTerm\Solo\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
+use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Support\SafeBytes;
 
 class ByteSpliceTest extends Base
 {
+    #[Test]
+    public function slice_at_emoji_1()
+    {
+        $command = new Command;
+
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('hello❤️');
+
+        $this->assertEquals('hello', $sliced);
+    }
+
+    #[Test]
+    public function slice_at_emoji_2()
+    {
+        $command = new Command;
+
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('❤️');
+
+        $this->assertEquals('', $sliced);
+    }
+
+    #[Test]
+    public function slice_at_emoji_3()
+    {
+        $command = new Command;
+
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('❤️ ❤️');
+
+        $this->assertEquals('❤️ ', $sliced);
+    }
+
     #[Test]
     public function empty(): void
     {
