@@ -47,6 +47,10 @@ trait ManagesProcess
 
         $command = explode(' ', $this->command);
 
+        // Resources about screen version needing to be 5.0.0
+        // @TODO add a check on startup to see what version `screen` they are using
+        // https://chatgpt.com/share/67b7b74e-3db8-8011-9e2b-79deb71eb12d
+
         // ??
         // alias screen='TERM=xterm-256color screen'
         // https://superuser.com/questions/800126/gnu-screen-changes-vim-syntax-highlighting-colors
@@ -54,14 +58,16 @@ trait ManagesProcess
 
         $screen = $this->makeNewScreen();
 
+        // Build the command by adding a few
+        $built = implode(" && ", [
+            $this->localEnvironmentVariables(),
+            "stty cols {$screen->width} rows {$screen->height}",
+            "screen -U -q {$this->command}"
+        ]);
+
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            // ->command($command)
-            ->command([
-                'bash',
-                '-c',
-                "stty cols {$screen->width} rows {$screen->height} && screen -q " . $this->command,
-            ])
+            ->command(['bash', '-c', $built])
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)
@@ -83,11 +89,40 @@ trait ManagesProcess
         return $process->env([
             'TERM' => 'xterm-256color',
             'FORCE_COLOR' => '1',
-            'COLUMNS' => $this->scrollPaneWidth(),
-            'LINES' => $this->scrollPaneHeight(),
+            'COLUMNS' => $screen->width,
+            'LINES' => $screen->height,
             ...$this->environment,
             ...$process->environment
         ]);
+    }
+
+    protected function localEnvironmentVariables()
+    {
+        $locale = $this->utf8Locale();
+
+        return "export LC_ALL={$locale}; export LANG={$locale}";
+    }
+
+    protected function utf8Locale()
+    {
+        $locale = function_exists('locale_get_default')
+            ? locale_get_default()
+            : (getenv('LC_ALL') ?: (getenv('LC_CTYPE') ?: getenv('LANG')));
+
+        if (!$locale) {
+            return 'en_US.UTF-8';
+        }
+
+        if (stripos($locale, 'UTF-8') !== false) {
+            return $locale;
+        }
+
+        if (str_contains($locale, '.')) {
+            [$langRegion, $encoding] = explode('.', $locale, 2);
+            return $langRegion . '.UTF-8';
+        }
+
+        return $locale . '.UTF-8';
     }
 
     protected function setWorkingDirectory(): void
@@ -158,8 +193,6 @@ trait ManagesProcess
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
             $this->partialBuffer .= $buffer;
         });
-
-        //         $this->sendSizeViaStty();
     }
 
     public function whenStopping()
@@ -351,7 +384,7 @@ trait ManagesProcess
             // @link https://github.com/aarondfrancis/solo/issues/33
             $this->clearStdOut();
             $this->clearStdErr();
-        } elseif ($after > 10240) {
+        } elseif ($after > 10_240) {
             if (Str::contains($this->partialBuffer, "\n")) {
                 // We're over the limit, so look for a safe spot to cut, starting with newlines.
                 $write = Str::beforeLast($this->partialBuffer, "\n");
@@ -360,42 +393,24 @@ trait ManagesProcess
                 $write = Str::beforeLast($this->partialBuffer, "\e");
             } else {
                 // Otherwise, we'll just slice anywhere that's safe.
-                $write = $this->sliceAtUTF8Boundary($this->partialBuffer);
+                $write = $this->sliceBeforeLogicalCharacterBoundary($this->partialBuffer);
             }
         } else {
             return;
         }
 
         $this->partialBuffer = substr($this->partialBuffer, strlen($write));
+
         $this->addOutput($write);
     }
 
-    public function sliceAtUTF8Boundary(string $input): string
+    public function sliceBeforeLogicalCharacterBoundary(string $input): string
     {
-        $len = strlen($input);
+        // The pattern \X is a PCRE escape that matches an extended
+        // grapheme cluster—that is, a complete visual unit.
+        preg_match_all("/\X/u", $input, $matches);
 
-        // Walk backward from the end, to find a safe UTF-8 start
-        $i = $len - 1;
-        while ($i >= 0) {
-            $byteVal = ord($input[$i]);
-
-            // If this is a leading byte or ASCII, we're good
-            // Leading bytes match:
-            //   0xxxxxxx (ASCII)
-            //   110xxxxx (2-byte start)
-            //   1110xxxx (3-byte start)
-            //   11110xxx (4-byte start)
-            // etc.
-            if (($byteVal & 0b11000000) != 0b10000000) {
-                // This is not a continuation byte (i.e. 10xxxxxx),
-                // so it's a valid UTF-8 start boundary
-                break;
-            }
-
-            $i--;
-        }
-
-        // Now $i is either -1 (we fell off the start) or at the start of a codepoint
-        return substr($input, 0, $i + 1);
+        // Return everything before the last grapheme cluster.
+        return implode("", array_splice($matches[0], 0, -1));
     }
 }
