@@ -28,7 +28,7 @@ class AnsiMatchTest extends Base
     #[Test]
     public function home_command_accepts_params()
     {
-        $sequence = "[5;10H";
+        $sequence = '[5;10H';
         $result = AnsiMatcher::split("\e{$sequence}");
 
         $this->assertEquals('5;10', $result[0]->params);

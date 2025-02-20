@@ -628,7 +628,7 @@ TXT;
     {
         $line = str_repeat('a', 128);
 
-        $this->assertTerminalMatch($line.'0');
+        $this->assertTerminalMatch($line . '0');
     }
 
     #[Test]
