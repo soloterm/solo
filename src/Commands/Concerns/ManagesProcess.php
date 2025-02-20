@@ -59,7 +59,7 @@ trait ManagesProcess
         $screen = $this->makeNewScreen();
 
         // Build the command by adding a few
-        $built = implode(" && ", [
+        $built = implode(' && ', [
             $this->localEnvironmentVariables(),
             "stty cols {$screen->width} rows {$screen->height}",
             "screen -U -q {$this->command}"
@@ -119,6 +119,7 @@ trait ManagesProcess
 
         if (str_contains($locale, '.')) {
             [$langRegion, $encoding] = explode('.', $locale, 2);
+
             return $langRegion . '.UTF-8';
         }
 
@@ -411,6 +412,6 @@ trait ManagesProcess
         preg_match_all("/\X/u", $input, $matches);
 
         // Return everything before the last grapheme cluster.
-        return implode("", array_splice($matches[0], 0, -1));
+        return implode('', array_splice($matches[0], 0, -1));
     }
 }
