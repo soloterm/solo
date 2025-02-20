@@ -90,8 +90,15 @@ class Screen
 
     public function write(string $content): static
     {
-        // Carriage returns get replaced with a code to move to column 0.
-        $content = str_replace("\r", "\e[G", $content);
+        // Convert raw backspace (BS or DEL) into an ANSI “cursor backward”
+        // so that your existing handleAnsiCode('\e[D') picks it up.
+        // Also convert carriage returns to cursor-col=0:
+        $content = str_replace(
+            search: array("\x08", "\x7f", "\r"),
+            replace: array("\e[D", "\e[D", "\e[G"),
+            subject: $content
+        );
+
 
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
