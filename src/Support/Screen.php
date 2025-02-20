@@ -180,9 +180,7 @@ class Screen
             $this->moveCursorCol($paramDefaultOne - 1);
 
         } elseif ($command === 'H') {
-            // Cursor home
-            $this->moveCursorRow(absolute: 0);
-            $this->moveCursorCol(absolute: 0);
+            $this->handleAbsoluteMove($ansi->params);
 
         } elseif ($command === 'J') {
             $this->handleEraseDisplay($paramDefaultZero);
@@ -385,6 +383,22 @@ class Screen
         $codes = array_map(intval(...), explode(';', $params));
 
         $this->ansi->addAnsiCodes(...$codes);
+    }
+
+    protected function handleAbsoluteMove(string $params)
+    {
+        if ($params !== "") {
+            [$row, $col] = explode(";", $params);
+            $row = $row === '' ? 1 : intval($row);
+            $col = $col === '' ? 1 : intval($col);
+        } else {
+            $row = 1;
+            $col = 1;
+        }
+
+        // ANSI codes are 1-based, while our system is 0-based.
+        $this->moveCursorRow(absolute: --$row);
+        $this->moveCursorCol(absolute: --$col);
     }
 
     protected function handleEraseDisplay(int $param): void

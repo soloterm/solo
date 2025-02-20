@@ -231,6 +231,7 @@ trait ComparesVisually
     {
         echo "\e[?1049l"; // Kill any alt screens
         echo "\e[0m"; // Reset all styles
+        echo "\e[r"; // Reset the scroll region
         echo "\e[H"; // move home
         echo "\e[2J"; // clear screen
         echo "\e[?25h"; // show cursor

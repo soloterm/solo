@@ -630,4 +630,34 @@ TXT;
 
         $this->assertTerminalMatch($line.'0');
     }
+
+    #[Test]
+    public function cursor_home_both()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[19;8Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_col_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[;8Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_row_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[19;Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_semicolon_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[;Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_no_params()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[Hhey there");
+    }
 }
