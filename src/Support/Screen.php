@@ -94,11 +94,10 @@ class Screen
         // so that your existing handleAnsiCode('\e[D') picks it up.
         // Also convert carriage returns to cursor-col=0:
         $content = str_replace(
-            search: array("\x08", "\x7f", "\r"),
-            replace: array("\e[D", "\e[D", "\e[G"),
+            search: ["\x08", "\x7f", "\r"],
+            replace: ["\e[D", "\e[D", "\e[G"],
             subject: $content
         );
-
 
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
