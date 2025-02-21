@@ -626,7 +626,8 @@ TXT;
     #[Test]
     public function the_daniel_weaver_test_bless_you_daniel()
     {
-        $line = str_repeat('a', 128);
+        $width = $this->makeIdenticalScreen()->width;
+        $line = str_repeat('a', $width);
 
         $this->assertTerminalMatch($line . '0');
     }

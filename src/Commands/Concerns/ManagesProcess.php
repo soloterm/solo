@@ -58,7 +58,7 @@ trait ManagesProcess
 
         $screen = $this->makeNewScreen();
 
-        // Build the command by adding a few
+        // Build the command by adding a few necessary arguments.
         $built = implode(" && ", [
             $this->localEnvironmentVariables(),
             "stty cols {$screen->width} rows {$screen->height}",
@@ -191,6 +191,7 @@ trait ManagesProcess
         $this->beforeStart();
 
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
+            file_put_contents('debug.txt', $buffer, FILE_APPEND);
             $this->partialBuffer .= $buffer;
         });
     }

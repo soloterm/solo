@@ -219,63 +219,190 @@ class Screen
         $this->moveCursorCol(absolute: 0);
     }
 
+    /**
+     * Inserts printable text at the current cursor position in the current buffer line.
+     * The insertion respects display widths (using mb_strwidth) so that wide characters,
+     * like emojis, correctly overwrite the appropriate number of columns.
+     */
     protected function handlePrintableCharacters(string $text): void
     {
         if ($text === '') {
             return;
         }
 
+        // Ensure the current row exists.
         $this->buffer->expand($this->cursorRow);
-
         $lineContent = $this->buffer[$this->cursorRow];
 
-        // If cursorCol is beyond current line length, pad with spaces.
-        $paddingRequired = $this->cursorCol - mb_strwidth($lineContent, 'UTF-8');
+        // It's possible that an emoji is occupying columns 1&2, and the
+        // cursor is set to col 2, which means we'd splice a grapheme.
+        // Here we snap backwards to the nearest grapheme boundary.
+        $snapped = $this->snapCursorColToGraphemeBoundary($lineContent, $this->cursorCol);
 
-        if ($paddingRequired > 0) {
-            $lineContent .= str_repeat(' ', $paddingRequired);
+        // If we moved the cursor back, we need to write in spaces to bring
+        // us back to where we were originally. This puts the cursor in
+        // the right spot without leaving half an emoji behind.
+        if ($this->cursorCol !== $snapped) {
+            $text = str_repeat(' ', $this->cursorCol - $snapped) . $text;
+            $this->cursorCol = $snapped;
         }
 
+        // Pad the line if the cursor is beyond its current display width.
+        $currentWidth = mb_strwidth($lineContent, 'UTF-8');
+        if ($this->cursorCol > $currentWidth) {
+            $lineContent .= str_repeat(' ', $this->cursorCol - $currentWidth);
+        }
+
+        // Get the portion of the line before the cursor.
+        [$before,] = $this->substrByDisplayWidth($lineContent, $this->cursorCol);
+
+        // Determine how many columns remain on this line.
         $spaceRemaining = $this->width - $this->cursorCol;
 
-        // Text that doesn't fit on this line. We'll recursively call
-        // this function at the very end to add it to a new line.
-        $remainder = mb_substr($text, $spaceRemaining, null, 'UTF-8');
+        // Get the portion of $text that fits in the remaining space and capture any overflow.
+        [$text, $overflow] = $this->substrByDisplayWidth($text, $spaceRemaining);
 
-        // The text that can fit on this line.
-        $text = mb_substr($text, 0, $spaceRemaining, 'UTF-8');
+        // Calculate the display width of the inserted text.
+        $insertWidth = mb_strwidth($text, 'UTF-8');
 
-        // The part of the line before the cursor.
-        $before = mb_substr($lineContent, 0, $this->cursorCol, 'UTF-8');
+//        if ($text === '🐛️' || $text === '❤️') {
+//            $text = preg_replace('/[\x{FE00}-\x{FE0F}]/u', '', $text);
+//            dd([
+//                '$text' => $text,
+//                'strlen' => strlen($text),
+//                'mb_strlen' => mb_strlen($text, 'UTF-8'),
+//                'mb_strwidth' => mb_strwidth($text, 'UTF-8'),
+//                'grapheme' => grapheme_strlen($text),
+//            ]);
+//        }
 
-        // Account for emojis in the before text
-        while (mb_strwidth($before, 'UTF-8') > $this->cursorCol) {
-            $tmpCursor = $tmpCursor ?? $this->cursorRow;
-            $tmpCursor--;
-            $before = mb_substr($before, 0, $tmpCursor, 'UTF-8');
+        // Now, we need to remove from the current line the columns that will be overwritten.
+        // That is, we skip from the current cursor position to (cursor + insertWidth).
+        $skipCol = $this->cursorCol + $insertWidth;
+
+        // The "after" part is what remains of the line after that skip.
+        [, $after] = $this->substrByDisplayWidth($lineContent, $skipCol);
+
+        // Build the new line by concatenating the "before", inserted text, and "after".
+        $newLine = $before . $text . $after;
+
+        // If the new line exceeds the allowed width, split it.
+        if (mb_strwidth($newLine, 'UTF-8') > $this->width) {
+            [$lineThatFits, $lineOverflow] = $this->substrByDisplayWidth($newLine, $this->width);
+            $newLine = $lineThatFits;
+            // Append the overflow from the line (if any) to the text overflow.
+            $overflow = $lineOverflow . $overflow;
         }
 
-        // The part of the line after the cursor *and* after our new content.
-        // It's possible we overwrote some characters, which is correct,
-        // but we might not have overwritten everything, so we
-        // need to append any leftovers.
-        $after = mb_substr($lineContent, mb_strlen($before, 'UTF-8') + mb_strlen($text, 'UTF-8'), null, 'UTF-8');
+        // Update the buffer with the newly composed line.
+        $this->buffer[$this->cursorRow] = $newLine;
 
-        $this->buffer[$this->cursorRow] = $before . $text . $after;
+        if ($text === '🐛️' || $text === '❤️') {
+//            dd($this->cursorCol, $insertWidth);
 
-        $startCol = $this->cursorCol;
+            // I think what needs to happen is I think if the string length of a piece of text doesn't match the mb string length of a piece of text, then this row needs to become an array of characters. I don't think we can continue to just keep it as a string. And the array should hold one character per column, even if that character is a multi-byte character. In the instance of a character that spans two columns, the second column that it occupies should be either null or some sort of like a constant so we know that it is a continuation. Where possible, we should keep the rows as strings because that's going to be a lot more memory efficient.
+        }
 
-        // Update the cursor position forward by the length of the text
-        $this->moveCursorCol(absolute: mb_strlen($before . $text, 'UTF-8'));
+        // Move the cursor forward by the display width of the inserted text.
+        $this->cursorCol = mb_strlen( $before . $text, 'UTF-8');
 
-        // Fill the ANSI buffer with currently active flags, based
-        // on where the cursor started and where it ended.
-        $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $startCol, max($startCol, $this->cursorCol - 1));
+        // Update the ANSI buffer for active flags if needed.
+        $this->ansi->fillBufferWithActiveFlags(
+            $this->cursorRow,
+            $this->cursorCol - $insertWidth,
+            $this->cursorCol - 1
+        );
 
-        if ($remainder !== '') {
+        // If there's overflow (i.e. text that didn't fit on this line),
+        // move to a new line and recursively handle it.
+        if ($overflow !== '') {
             $this->newlineWithScroll();
-            $this->handlePrintableCharacters($remainder);
+            $this->handlePrintableCharacters($overflow);
         }
+    }
+
+    /**
+     * Ensures the cursor never lands in the middle of a wide grapheme.
+     * If $col is inside a multi-width grapheme, we "snap" to the start of that grapheme.
+     */
+    protected function snapCursorColToGraphemeBoundary(string $line, int $col): int
+    {
+        // If the line is empty or the column is at/before zero, no need to adjust.
+        if ($line === '' || $col <= 0) {
+            return max(0, $col);
+        }
+
+        // Break the line into grapheme clusters.
+        if (preg_match_all('/\X/u', $line, $matches) === false) {
+            // If regex fails, just return the requested col as a fallback.
+            return $col;
+        }
+
+        $graphemes = $matches[0];
+        $currentWidth = 0;
+
+        foreach ($graphemes as $g) {
+            $gWidth = mb_strwidth($g, 'UTF-8');
+            $start = $currentWidth;         // inclusive
+            $end = $currentWidth + $gWidth; // exclusive
+
+            // If $col is in the "middle" of this grapheme's columns, snap to the start.
+            if ($col > $start && $col < $end) {
+                return $start;
+            }
+
+            $currentWidth = $end;
+            // If we've already passed the requested col, we can stop checking.
+            if ($currentWidth >= $col) {
+                break;
+            }
+        }
+
+        // If we never found a partial overlap, we can safely return the original col.
+        return $col;
+    }
+
+
+    /**
+     * Returns an array with two elements:
+     *   [0] => The substring that fits within $maxWidth display columns.
+     *   [1] => The remainder of the string.
+     *
+     * This function uses extended grapheme cluster matching (supported by Symfony's
+     * intl-grapheme polyfill) to ensure that complex characters (emoji, combining marks, etc.)
+     * are not split in half. It measures each cluster's display width using mb_strwidth.
+     *
+     * @param  string  $string  The input string.
+     * @param  int  $maxWidth  The maximum display width (in columns) allowed.
+     *
+     * @return array [string $fit, string $remainder]
+     */
+    function substrByDisplayWidth(string $string, int $maxWidth): array
+    {
+        $width = 0;
+        $fit = '';
+
+        // Split the string into extended grapheme clusters.
+        // Symfony's intl-grapheme polyfill ensures \X works correctly even in older PHP versions.
+        if (preg_match_all('/\X/u', $string, $matches) === false) {
+            // Fallback: if regex fails, simply return the first $maxWidth characters.
+            return [mb_substr($string, 0, $maxWidth, 'UTF-8'), ''];
+        }
+        $graphemes = $matches[0];
+        $i = 0;
+        foreach ($graphemes as $g) {
+            $gWidth = mb_strwidth($g, 'UTF-8');
+            // If adding this grapheme would exceed the max width, stop.
+            if ($width + $gWidth > $maxWidth) {
+                break;
+            }
+            $fit .= $g;
+            $width += $gWidth;
+            $i++;
+        }
+        // The remainder is all the graphemes not included in the fit.
+        $remainder = implode('', array_slice($graphemes, $i));
+        return [$fit, $remainder];
     }
 
     public function saveCursor()
