@@ -20,7 +20,7 @@ class ByteSpliceTest extends Base
     {
         $command = new Command;
 
-        $sliced = $command->sliceBeforeLogicalCharacterBoundary("hello❤️");
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('hello❤️');
 
         $this->assertEquals('hello', $sliced);
     }
@@ -30,7 +30,7 @@ class ByteSpliceTest extends Base
     {
         $command = new Command;
 
-        $sliced = $command->sliceBeforeLogicalCharacterBoundary("❤️");
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('❤️');
 
         $this->assertEquals('', $sliced);
     }
@@ -40,11 +40,10 @@ class ByteSpliceTest extends Base
     {
         $command = new Command;
 
-        $sliced = $command->sliceBeforeLogicalCharacterBoundary("❤️ ❤️");
+        $sliced = $command->sliceBeforeLogicalCharacterBoundary('❤️ ❤️');
 
         $this->assertEquals('❤️ ', $sliced);
     }
-
 
     #[Test]
     public function empty(): void

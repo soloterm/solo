@@ -630,6 +630,7 @@ TXT;
         $line = str_repeat('a', $width);
 
         $this->assertTerminalMatch($line . '0');
+
     }
 
     #[Test]
@@ -660,5 +661,6 @@ TXT;
     public function cursor_home_no_params()
     {
         $this->assertTerminalMatch("\e[H\e[2J-----------\e[Hhey there");
+
     }
 }
