@@ -230,7 +230,8 @@ class Screen
         $lineContent = $this->buffer[$this->cursorRow];
 
         // If cursorCol is beyond current line length, pad with spaces.
-        $paddingRequired = $this->cursorCol - mb_strlen($lineContent, 'UTF-8');
+        $paddingRequired = $this->cursorCol - mb_strwidth($lineContent, 'UTF-8');
+
         if ($paddingRequired > 0) {
             $lineContent .= str_repeat(' ', $paddingRequired);
         }
@@ -247,11 +248,18 @@ class Screen
         // The part of the line before the cursor.
         $before = mb_substr($lineContent, 0, $this->cursorCol, 'UTF-8');
 
+        // Account for emojis in the before text
+        while (mb_strwidth($before, 'UTF-8') > $this->cursorCol) {
+            $tmpCursor = $tmpCursor ?? $this->cursorRow;
+            $tmpCursor--;
+            $before = mb_substr($before, 0, $tmpCursor, 'UTF-8');
+        }
+
         // The part of the line after the cursor *and* after our new content.
         // It's possible we overwrote some characters, which is correct,
         // but we might not have overwritten everything, so we
         // need to append any leftovers.
-        $after = mb_substr($lineContent, $this->cursorCol + mb_strlen($text, 'UTF-8'), null, 'UTF-8');
+        $after = mb_substr($lineContent, mb_strlen($before, 'UTF-8') + mb_strlen($text, 'UTF-8'), null, 'UTF-8');
 
         $this->buffer[$this->cursorRow] = $before . $text . $after;
 
