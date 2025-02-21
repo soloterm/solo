@@ -9,12 +9,8 @@
 
 namespace SoloTerm\Solo\Tests\Unit;
 
-use Generator;
-use Laravel\Prompts\Terminal;
 use PHPUnit\Framework\Attributes\Test;
 use SoloTerm\Solo\Tests\Support\ComparesVisually;
-
-use function Orchestra\Testbench\package_path;
 
 class EmojiTest extends Base
 {
@@ -106,7 +102,6 @@ class EmojiTest extends Base
         $this->assertTerminalMatch("\e[33m" . $full . "\e[0m\e[;5H aaron ");
     }
 
-
     #[Test]
     public function double_char_emoji_before()
     {
@@ -158,7 +153,7 @@ class EmojiTest extends Base
         $this->assertTerminalMatch([
             '--------------------------',
             "\e[15D",
-            "🐛️",
+            '🐛️',
             'test'
         ], iterate: true);
     }
@@ -169,10 +164,8 @@ class EmojiTest extends Base
         $this->assertTerminalMatch([
             '--------------------------',
             "\e[15D",
-            "❤️",
+            '❤️',
             'test'
         ], iterate: true);
     }
-
-
 }

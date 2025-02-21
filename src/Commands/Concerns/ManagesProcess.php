@@ -59,7 +59,7 @@ trait ManagesProcess
         $screen = $this->makeNewScreen();
 
         // Build the command by adding a few necessary arguments.
-        $built = implode(" && ", [
+        $built = implode(' && ', [
             $this->localEnvironmentVariables(),
             "stty cols {$screen->width} rows {$screen->height}",
             "screen -U -q {$this->command}"

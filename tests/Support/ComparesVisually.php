@@ -12,7 +12,6 @@ declare(strict_types=1);
 namespace SoloTerm\Solo\Tests\Support;
 
 use Exception;
-use Generator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
@@ -111,7 +110,7 @@ trait ComparesVisually
 
         $screen = $this->makeIdenticalScreen();
 
-        foreach($content as $c) {
+        foreach ($content as $c) {
             $screen->write($c);
         }
 

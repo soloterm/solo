@@ -254,7 +254,7 @@ class Screen
         }
 
         // Get the portion of the line before the cursor.
-        [$before,] = $this->substrByDisplayWidth($lineContent, $this->cursorCol);
+        [$before] = $this->substrByDisplayWidth($lineContent, $this->cursorCol);
 
         // Determine how many columns remain on this line.
         $spaceRemaining = $this->width - $this->cursorCol;
@@ -265,16 +265,16 @@ class Screen
         // Calculate the display width of the inserted text.
         $insertWidth = mb_strwidth($text, 'UTF-8');
 
-//        if ($text === '🐛️' || $text === '❤️') {
-//            $text = preg_replace('/[\x{FE00}-\x{FE0F}]/u', '', $text);
-//            dd([
-//                '$text' => $text,
-//                'strlen' => strlen($text),
-//                'mb_strlen' => mb_strlen($text, 'UTF-8'),
-//                'mb_strwidth' => mb_strwidth($text, 'UTF-8'),
-//                'grapheme' => grapheme_strlen($text),
-//            ]);
-//        }
+        //        if ($text === '🐛️' || $text === '❤️') {
+        //            $text = preg_replace('/[\x{FE00}-\x{FE0F}]/u', '', $text);
+        //            dd([
+        //                '$text' => $text,
+        //                'strlen' => strlen($text),
+        //                'mb_strlen' => mb_strlen($text, 'UTF-8'),
+        //                'mb_strwidth' => mb_strwidth($text, 'UTF-8'),
+        //                'grapheme' => grapheme_strlen($text),
+        //            ]);
+        //        }
 
         // Now, we need to remove from the current line the columns that will be overwritten.
         // That is, we skip from the current cursor position to (cursor + insertWidth).
@@ -298,13 +298,13 @@ class Screen
         $this->buffer[$this->cursorRow] = $newLine;
 
         if ($text === '🐛️' || $text === '❤️') {
-//            dd($this->cursorCol, $insertWidth);
+            //            dd($this->cursorCol, $insertWidth);
 
             // I think what needs to happen is I think if the string length of a piece of text doesn't match the mb string length of a piece of text, then this row needs to become an array of characters. I don't think we can continue to just keep it as a string. And the array should hold one character per column, even if that character is a multi-byte character. In the instance of a character that spans two columns, the second column that it occupies should be either null or some sort of like a constant so we know that it is a continuation. Where possible, we should keep the rows as strings because that's going to be a lot more memory efficient.
         }
 
         // Move the cursor forward by the display width of the inserted text.
-        $this->cursorCol = mb_strlen( $before . $text, 'UTF-8');
+        $this->cursorCol = mb_strlen($before . $text, 'UTF-8');
 
         // Update the ANSI buffer for active flags if needed.
         $this->ansi->fillBufferWithActiveFlags(
@@ -362,7 +362,6 @@ class Screen
         return $col;
     }
 
-
     /**
      * Returns an array with two elements:
      *   [0] => The substring that fits within $maxWidth display columns.
@@ -374,10 +373,9 @@ class Screen
      *
      * @param  string  $string  The input string.
      * @param  int  $maxWidth  The maximum display width (in columns) allowed.
-     *
      * @return array [string $fit, string $remainder]
      */
-    function substrByDisplayWidth(string $string, int $maxWidth): array
+    public function substrByDisplayWidth(string $string, int $maxWidth): array
     {
         $width = 0;
         $fit = '';
@@ -402,6 +400,7 @@ class Screen
         }
         // The remainder is all the graphemes not included in the fit.
         $remainder = implode('', array_slice($graphemes, $i));
+
         return [$fit, $remainder];
     }
 

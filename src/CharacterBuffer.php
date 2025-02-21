@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @author Aaron Francis <aarondfrancis@gmail.com|https://twitter.com/aarondfrancis>
  */
@@ -7,9 +8,10 @@ namespace SoloTerm\Solo;
 
 class CharacterBuffer
 {
-
     protected array $buffer;
+
     protected int $width;
+
     protected int $height;
 
     /**
@@ -53,7 +55,7 @@ class CharacterBuffer
     public function writeString(int $row, int $col, string $text): void
     {
         if (preg_match_all('/\X/u', $text, $matches) === false) {
-            throw new \Exception("Error splitting text into grapheme clusters.");
+            throw new \Exception('Error splitting text into grapheme clusters.');
         }
         $graphemes = $matches[0];
         $currentCol = $col;
@@ -77,8 +79,6 @@ class CharacterBuffer
 
     /**
      * Returns the entire buffer as a two-dimensional array.
-     *
-     * @return array
      */
     public function getBuffer(): array
     {
@@ -89,8 +89,6 @@ class CharacterBuffer
      * Renders the buffer as a string.
      * This method simply implodes each row into a string.
      * PHP will convert any null values to empty strings.
-     *
-     * @return string
      */
     public function render(): string
     {
@@ -99,6 +97,7 @@ class CharacterBuffer
             // Imploding the row; null values become empty strings.
             $lines[] = implode('', $row);
         }
+
         return implode("\n", $lines);
     }
 }
