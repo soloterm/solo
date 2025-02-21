@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace SoloTerm\Solo\Tests\Support;
 
 use Exception;
+use Generator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
@@ -28,11 +29,15 @@ trait ComparesVisually
      *
      * @throws Exception
      */
-    public function assertTerminalMatch(array|string $content): void
+    public function assertTerminalMatch(array|string $content, $iterate = false): void
     {
         // Just a little convenience for passing in a bunch of content.
-        if (is_array($content)) {
+        if (is_array($content) && !$iterate) {
             $content = implode(PHP_EOL, $content);
+        }
+
+        if (is_string($content)) {
+            $content = [$content];
         }
 
         if (getenv('ENABLE_SCREENSHOT_TESTING') === false) {
@@ -64,16 +69,22 @@ trait ComparesVisually
         $this->assertEquals($fixture['output'], $screen->write($content)->output());
     }
 
-    protected function assertVisualMatch(string $content, $attempt = 1)
+    protected function assertVisualMatch(array $content, $attempt = 1)
     {
         $itermPath = $this->screenshotPath('iterm');
         $emulatedPath = $this->screenshotPath('emulated');
 
         $this->captureCleanOutput($itermPath, $content);
 
-        $emulated = $this->makeIdenticalScreen()->write($content)->output();
+        $screen = $this->makeIdenticalScreen();
 
-        $this->captureCleanOutput($emulatedPath, $emulated);
+        foreach ($content as $c) {
+            $screen->write($c);
+        }
+
+        $emulated = $screen->output();
+
+        $this->captureCleanOutput($emulatedPath, [$emulated]);
 
         $matched = $this->terminalAreaIsIdentical($itermPath, $emulatedPath);
 
@@ -100,11 +111,15 @@ trait ComparesVisually
 
         $screen = $this->makeIdenticalScreen();
 
+        foreach($content as $c) {
+            $screen->write($c);
+        }
+
         file_put_contents($this->fixturePath(), json_encode([
-            'checksum' => md5($content),
+            'checksum' => md5(json_encode($content)),
             'width' => $screen->width,
             'height' => $screen->height,
-            'output' => $screen->write($content)->output()
+            'output' => $screen->output()
         ]));
     }
 
@@ -182,7 +197,7 @@ trait ComparesVisually
      *
      * @throws Exception If screencapture fails or iTerm window not found.
      */
-    protected function captureCleanOutput(string $filename, string $content): void
+    protected function captureCleanOutput(string $filename, array $content): void
     {
         $this->ensureDirectoriesExist($filename);
 
@@ -192,10 +207,11 @@ trait ComparesVisually
         // echo "\e[1 q"; // Block cursor
         echo "\e[?25l"; // Hide cursor
 
-        echo $content;
-
-        // Give time for the screen to update visually
-        usleep(10_000);
+        foreach ($content as $c) {
+            echo $c;
+            // Give time for the screen to update visually
+            usleep(10_000);
+        }
 
         // Obtain iTerm window ID
         $iterm = trim((string) shell_exec("osascript -e 'tell application \"iTerm\" to get the id of window 1'"));
