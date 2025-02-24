@@ -56,41 +56,30 @@ jobs:
         with:
           platform: x64
 
-      # Create a simple C++ file that includes the header and exports the function
-      - name: Check header file contents
+      # Create a simple C file that includes the C header
+      - name: Create C wrapper file
         run: |
-          head -n 100 widecharwidth-src/widechar_width.h
-
-      - name: Create wrapper C++ file
-        run: |
-          cat > wrapper.cpp << 'EOL'
-          #include <cstdint>
-          #include "widecharwidth-src/widechar_width.h"
+          cat > wrapper.c << 'EOL'
+          #include "widecharwidth-src/widechar_width_c.h"
           
-          // Export the function for FFI with C linkage
-          extern "C" {
-              // Simple wrapper around the header's function
-              int widechar_wcwidth(uint32_t code_point) {
-                  // The header must define this function
-                  return ::widechar_wcwidth(code_point);
-              }
-          }
+          // The function is already available from the header
+          // We just need to compile it into a shared library
           EOL
 
       - name: Build shared library (Linux)
         if: runner.os == 'Linux'
         run: |
-          g++ -shared -fPIC -o ${{ matrix.output_name }} wrapper.cpp
+          gcc -shared -fPIC -o ${{ matrix.output_name }} wrapper.c
 
       - name: Build shared library (macOS)
         if: runner.os == 'macOS'
         run: |
-          g++ -shared -fPIC -o ${{ matrix.output_name }} wrapper.cpp
+          gcc -shared -fPIC -o ${{ matrix.output_name }} wrapper.c
 
       - name: Build shared library (Windows)
         if: runner.os == 'Windows'
         run: |
-          g++ -shared -o ${{ matrix.output_name }} wrapper.cpp
+          gcc -shared -o ${{ matrix.output_name }} wrapper.c
 
       - name: Move library to libs directory
         run: |
@@ -171,9 +160,9 @@ jobs:
           // Define the function signature
           $ffi = FFI::cdef("int widechar_wcwidth(unsigned int code_point);", $lib);
           
-          // Example usage
+          // Example usage - handle special return values appropriately
           $width = $ffi->widechar_wcwidth(0x1F600); // 😀
-          echo "Width: " . $width . "\n";
+          echo "Width: " . ($width > 0 ? $width : 0) . "\n"; // Convert negative values to 0
           ```
           EOL
 
