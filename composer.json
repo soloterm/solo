@@ -19,7 +19,8 @@
         "ext-posix": "*",
         "laravel/prompts": "^0.1.21|^0.2|^0.3",
         "joetannenbaum/chewie": "^0.1",
-        "symfony/polyfill-intl-grapheme": "1.x-dev"
+        "symfony/polyfill-intl-grapheme": "1.x-dev",
+        "symfony/polyfill-intl-normalizer": "1.x-dev"
     },
     "require-dev": {
         "illuminate/database": "^10|^11|^12",
@@ -44,6 +45,9 @@
                 "SoloTerm\\Solo\\Providers\\SoloServiceProvider"
             ]
         }
+    },
+    "suggest": {
+        "ext-intl": "For best performance"
     },
     "scripts": {
         "post-autoload-dump": [
