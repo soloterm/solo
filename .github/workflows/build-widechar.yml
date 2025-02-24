@@ -57,13 +57,12 @@ jobs:
 
       # Create a simple C file that includes the C header
       - name: Create C wrapper file
+        shell: bash
         run: |
-          cat > wrapper.c << 'EOL'
-          #include "widecharwidth-src/widechar_width_c.h"
-          
-          // The function is already available from the header
-          // We just need to compile it into a shared library
-          EOL
+          echo '#include "widecharwidth-src/widechar_width_c.h"' > wrapper.c
+          echo '' >> wrapper.c
+          echo '// The function is already available from the header' >> wrapper.c
+          echo '// We just need to compile it into a shared library' >> wrapper.c
 
       - name: Build shared library (Linux)
         if: runner.os == 'Linux'
