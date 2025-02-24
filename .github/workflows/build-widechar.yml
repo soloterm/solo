@@ -73,6 +73,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           gcc -shared -fPIC -o ${{ matrix.output_name }} wrapper.c
+          # Ad-hoc sign the library for macOS
+          codesign --force --deep --sign - ${{ matrix.output_name }}
 
       - name: Build shared library (Windows)
         if: runner.os == 'Windows'
