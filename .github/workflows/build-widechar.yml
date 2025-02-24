@@ -56,32 +56,34 @@ jobs:
         with:
           platform: x64
 
-      # Create a simple C file that includes the header and exports the function
-      - name: Create wrapper C file
+      # Create a simple C++ file that includes the header and exports the function
+      - name: Create wrapper C++ file
         run: |
-          cat > wrapper.c << 'EOL'
+          cat > wrapper.cpp << 'EOL'
           #include "widecharwidth-src/widechar_width.h"
           
-          // Export the function for FFI
-          int widechar_wcwidth(unsigned int code_point) {
-              return widechar_wcwidth_integral(code_point);
+          // Export the function for FFI with C linkage
+          extern "C" {
+              int widechar_wcwidth(unsigned int code_point) {
+                  return widechar_wcwidth_integral(code_point);
+              }
           }
           EOL
 
       - name: Build shared library (Linux)
         if: runner.os == 'Linux'
         run: |
-          gcc -shared -fPIC -o ${{ matrix.output_name }} wrapper.c
+          g++ -shared -fPIC -o ${{ matrix.output_name }} wrapper.cpp
 
       - name: Build shared library (macOS)
         if: runner.os == 'macOS'
         run: |
-          gcc -shared -fPIC -o ${{ matrix.output_name }} wrapper.c
+          g++ -shared -fPIC -o ${{ matrix.output_name }} wrapper.cpp
 
       - name: Build shared library (Windows)
         if: runner.os == 'Windows'
         run: |
-          gcc -shared -o ${{ matrix.output_name }} wrapper.c
+          g++ -shared -o ${{ matrix.output_name }} wrapper.cpp
 
       - name: Move library to libs directory
         run: |
