@@ -52,9 +52,8 @@ jobs:
 
       - name: Set up MinGW (Windows)
         if: runner.os == 'Windows'
-        uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+        run: |
+          choco install mingw --version=8.1.0 -y
 
       # Create a simple C file that includes the C header
       - name: Create C wrapper file
