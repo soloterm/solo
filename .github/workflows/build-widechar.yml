@@ -37,7 +37,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ridiculousfish/widecharwidth
-          path: widecharwidth
+          path: widecharwidth-src
+
+      - name: Display repository contents
+        run: |
+          ls -la
+          ls -la widecharwidth-src/
 
       - name: Set up GCC (Linux)
         if: runner.os == 'Linux'
@@ -58,25 +63,25 @@ jobs:
 
       - name: Build shared library (Linux)
         if: runner.os == 'Linux'
-        working-directory: widecharwidth
         run: |
-          gcc -shared -fPIC -o ${{ matrix.output_name }} widechar_width.c
+          cd widecharwidth-src
+          gcc -shared -fPIC -o ../${{ matrix.output_name }} widechar_width.c
 
       - name: Build shared library (macOS)
         if: runner.os == 'macOS'
-        working-directory: widecharwidth
         run: |
-          gcc -shared -fPIC -o ${{ matrix.output_name }} widechar_width.c
+          cd widecharwidth-src
+          gcc -shared -fPIC -o ../${{ matrix.output_name }} widechar_width.c
 
       - name: Build shared library (Windows)
         if: runner.os == 'Windows'
-        working-directory: widecharwidth
         run: |
-          gcc -shared -o ${{ matrix.output_name }} widechar_width.c
+          cd widecharwidth-src
+          gcc -shared -o ../${{ matrix.output_name }} widechar_width.c
 
       - name: Move library to libs directory
         run: |
-          cp widecharwidth/${{ matrix.output_name }} libs/${{ matrix.lib_dir }}/
+          mv ${{ matrix.output_name }} libs/${{ matrix.lib_dir }}/
 
       - name: Upload library artifact
         uses: actions/upload-artifact@v4
@@ -116,6 +121,13 @@ jobs:
         with:
           name: windows-widecharwidth.dll
           path: libs/windows
+
+      - name: List contents of libs directory
+        run: |
+          ls -la libs/
+          ls -la libs/linux/
+          ls -la libs/macos/
+          ls -la libs/windows/
 
       - name: Create README for libs directory
         run: |
