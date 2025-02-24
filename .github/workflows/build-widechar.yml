@@ -57,15 +57,22 @@ jobs:
           platform: x64
 
       # Create a simple C++ file that includes the header and exports the function
+      - name: Check header file contents
+        run: |
+          head -n 100 widecharwidth-src/widechar_width.h
+
       - name: Create wrapper C++ file
         run: |
           cat > wrapper.cpp << 'EOL'
+          #include <cstdint>
           #include "widecharwidth-src/widechar_width.h"
           
           // Export the function for FFI with C linkage
           extern "C" {
-              int widechar_wcwidth(unsigned int code_point) {
-                  return widechar_wcwidth_integral(code_point);
+              // Simple wrapper around the header's function
+              int widechar_wcwidth(uint32_t code_point) {
+                  // The header must define this function
+                  return ::widechar_wcwidth(code_point);
               }
           }
           EOL
