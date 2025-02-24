@@ -28,13 +28,13 @@ jobs:
 
     steps:
       - name: Checkout main repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create libs directory structure
         run: mkdir -p libs/${{ matrix.lib_dir }}
 
       - name: Checkout widecharwidth repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ridiculousfish/widecharwidth
           path: widecharwidth
@@ -79,7 +79,7 @@ jobs:
           cp widecharwidth/${{ matrix.output_name }} libs/${{ matrix.lib_dir }}/
 
       - name: Upload library artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.lib_dir }}-${{ matrix.output_name }}
           path: libs/${{ matrix.lib_dir }}/${{ matrix.output_name }}
@@ -94,25 +94,25 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create libs directory
         run: mkdir -p libs/{linux,macos,windows}
 
       - name: Download Linux library
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: linux-libwidecharwidth.so
           path: libs/linux
 
       - name: Download macOS library
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: macos-libwidecharwidth.dylib
           path: libs/macos
 
       - name: Download Windows library
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: windows-widecharwidth.dll
           path: libs/windows
