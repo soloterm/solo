@@ -22,8 +22,8 @@ class GraphemeWidth
     private static $eastAsianPattern = '/[\x{1100}-\x{11FF}\x{3000}-\x{303F}\x{3130}-\x{318F}\x{AC00}-\x{D7AF}\x{3400}-\x{4DBF}\x{4E00}-\x{9FFF}\x{F900}-\x{FAFF}\x{FF00}-\x{FFEF}]/u';
     private static $textStyleEmojiPattern = '/^[\x{2600}-\x{26FF}\x{2700}-\x{27BF}]$/u';
     private static $flagSequencePattern = '/\p{Regional_Indicator}{2}|\x{1F3F4}[\x{E0060}-\x{E007F}]+/u';
-    private static $zwjSequencePattern = '/[\x{200B}\x{200C}\x{200D}\x{FEFF}\x{2060}-\x{2064}\x{034F}\x{061C}\x{202A}-\x{202E}]+/u';
-    private static $combiningMarksPattern = '/[\p{M}\x{0300}-\x{036F}\x{1AB0}-\x{1AFF}\x{1DC0}-\x{1DFF}\x{20D0}-\x{20FF}]+/u';
+    private static $zwjSequencePattern = '[\x{200B}\x{200C}\x{200D}\x{FEFF}\x{2060}-\x{2064}\x{034F}\x{061C}\x{202A}-\x{202E}]+';
+    private static $combiningMarksPattern = '[\p{M}\x{0300}-\x{036F}\x{1AB0}-\x{1AFF}\x{1DC0}-\x{1DFF}\x{20D0}-\x{20FF}]+';
 
     // Zero-width characters lookup for O(1) check
     private static $zeroWidthChars = [
@@ -85,7 +85,7 @@ class GraphemeWidth
         // Special cases for characters followed by ZWJ/ZWNJ
         if (mb_strpos($grapheme, "\u{200D}") !== false || mb_strpos($grapheme, "\u{200C}") !== false) {
             // Check if it's a single character + ZWJ sequence
-            if (mb_strlen(preg_replace(static::$zwjSequencePattern, '', $grapheme)) === 1) {
+            if (mb_strlen(preg_replace("/" . static::$zwjSequencePattern . "/u", '', $grapheme)) === 1) {
                 // If it's an emoji + ZWJ, it should be width 2
                 if (preg_match('/^[\x{1F300}-\x{1F6FF}][\x{200B}\x{200C}\x{200D}\x{FEFF}\x{2060}-\x{2064}]+$/u',
                     $grapheme)) {
@@ -146,7 +146,7 @@ class GraphemeWidth
         // If it has zero-width characters, we need special handling
         if ($hasZeroWidth) {
             // First, handle text with just formatting characters
-            $filtered = preg_replace(static::$zwjSequencePattern, '', $grapheme);
+            $filtered = preg_replace("/" . static::$zwjSequencePattern . "/u", '', $grapheme);
 
             // If nothing is left after removing zero-width chars, or only combining marks left
             if ($filtered === '' || preg_match('/^' . static::$combiningMarksPattern . '$/u', $filtered)) {
@@ -194,7 +194,7 @@ class GraphemeWidth
         }
 
         // Default fallback to mb_strwidth, carefully filtering zero-width characters
-        $filtered = preg_replace(static::$zwjSequencePattern, '', $grapheme);
+        $filtered = preg_replace("/" . static::$zwjSequencePattern . "/u", '', $grapheme);
         $width = mb_strwidth($filtered, 'UTF-8');
 
         return static::$cache[$grapheme] = ($width > 0) ? $width : 1;
