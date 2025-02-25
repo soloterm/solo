@@ -117,13 +117,7 @@ trait ManagesProcess
             return $locale;
         }
 
-        if (str_contains($locale, '.')) {
-            [$langRegion, $encoding] = explode('.', $locale, 2);
-
-            return $langRegion . '.UTF-8';
-        }
-
-        return $locale . '.UTF-8';
+        return explode('.', $locale, 2)[0] . '.UTF-8';
     }
 
     protected function setWorkingDirectory(): void
