@@ -192,7 +192,6 @@ trait ManagesProcess
         $this->beforeStart();
 
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
-            file_put_contents('debug.txt', $buffer, FILE_APPEND);
             $this->partialBuffer .= $buffer;
         });
     }

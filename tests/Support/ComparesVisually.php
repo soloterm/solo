@@ -12,15 +12,22 @@ declare(strict_types=1);
 namespace SoloTerm\Solo\Tests\Support;
 
 use Exception;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
+use PHPUnit\Framework\Attributes\Test;
+use ReflectionClass;
 use SoloTerm\Solo\Support\Screen;
 
 use function Orchestra\Testbench\package_path;
 
 trait ComparesVisually
 {
+    protected $testsPerMethod = [
+        //
+    ];
+
+    protected ?array $uniqueTestIdentifier = null;
+
     /**
      * Asserts that the given $content visually matches what would appear in iTerm.
      * This method takes screenshots of both the raw content rendered in iTerm and
@@ -39,6 +46,8 @@ trait ComparesVisually
             $content = [$content];
         }
 
+        $this->uniqueTestIdentifier = $this->uniqueTestIdentifier();
+
         if (getenv('ENABLE_SCREENSHOT_TESTING') === false) {
             $this->assertFixtureMatch($content);
 
@@ -50,22 +59,26 @@ trait ComparesVisually
         });
     }
 
-    protected function assertFixtureMatch(string $content)
+    protected function assertFixtureMatch(array $content)
     {
         if (!file_exists($this->fixturePath())) {
-            $this->markTestSkipped('Fixture does not exist for ' . $this->uniqueTestIdentifier()[1]);
+            $this->markTestSkipped('Fixture does not exist for ' . $this->uniqueTestIdentifier[1]);
         }
 
         $fixture = file_get_contents($this->fixturePath());
         $fixture = json_decode($fixture, true);
 
-        if ($fixture['checksum'] !== md5($content)) {
-            $this->markTestSkipped('Fixture out of date for ' . $this->uniqueTestIdentifier()[1]);
+        if ($fixture['checksum'] !== md5(json_encode($content))) {
+            $this->markTestSkipped('Fixture out of date for ' . $this->uniqueTestIdentifier[1]);
         }
 
         $screen = new Screen($fixture['width'], $fixture['height']);
 
-        $this->assertEquals($fixture['output'], $screen->write($content)->output());
+        foreach ($content as $c) {
+            $screen->write($c);
+        }
+
+        $this->assertEquals($fixture['output'], $screen->output());
     }
 
     protected function assertVisualMatch(array $content, $attempt = 1)
@@ -136,15 +149,29 @@ trait ComparesVisually
                 continue;
             }
 
-            if ($assertFound) {
+            if (!$frame['class']) {
+                continue;
+            }
+
+            $reflection = new ReflectionClass($frame['class']);
+            $method = $reflection->getMethod($frame['function']);
+            $isTest = $method->getAttributes(Test::class);
+
+            if (count($isTest)) {
                 $path = Str::after($frame['class'], '\\Tests\\');
                 $path = Str::replace('\\', '/', $path);
                 $function = $frame['function'];
 
+                $key = "$path::$function";
+
+                if (!array_key_exists($key, $this->testsPerMethod)) {
+                    $this->testsPerMethod[$key] = 0;
+                }
+
+                $function = $function . '_' . ++$this->testsPerMethod[$key];
+
                 return [$path, $function];
             }
-
-            $assertFound = Arr::get($frame, 'function') === 'assertTerminalMatch';
         }
 
         throw new Exception('Unable to find caller in debug backtrace.');
@@ -249,14 +276,14 @@ trait ComparesVisually
 
     protected function screenshotPath(string $suffix): string
     {
-        [$path, $function] = $this->uniqueTestIdentifier();
+        [$path, $function] = $this->uniqueTestIdentifier;
 
         return package_path("tests/Screenshots/{$path}/{$function}_{$suffix}.png");
     }
 
     protected function fixturePath(): string
     {
-        [$path, $function] = $this->uniqueTestIdentifier();
+        [$path, $function] = $this->uniqueTestIdentifier;
 
         return package_path("tests/Fixtures/{$path}/{$function}.json");
     }

@@ -334,7 +334,7 @@ class EnhancedTailCommand extends Command
         $traceContentWidth = $traceBoxWidth - 4;
 
         // A single trailing line that closes the JSON exception object.
-        if (trim($line) === "\e[0m\"}") {
+        if (str_contains($line, '"}') && trim(AnsiAware::plain($line)) === '"}') {
             return $theme->dim(' ╰' . str_repeat('═', $traceBoxWidth - 2) . '╯');
         }
 

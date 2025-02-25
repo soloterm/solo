@@ -12,6 +12,7 @@ namespace SoloTerm\Solo\Commands;
 use Chewie\Concerns\Ticks;
 use Chewie\Contracts\Loopable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use SoloTerm\Solo\Commands\Concerns\ManagesProcess;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Hotkeys\KeyHandler;
@@ -168,8 +169,7 @@ class Command implements Loopable
     */
     public function dd()
     {
-        $this->wrappedLines()->dd();
-        exit();
+        dd($this->screen->output());
     }
 
     public function addOutput($text)

@@ -45,12 +45,16 @@ class Screen
 
     protected array $stashedCursor = [];
 
+    protected CharacterBuffer $characterBuffer;
+
     public function __construct(int $width, int $height)
     {
         $this->width = $width;
         $this->height = $height;
         $this->ansi = new AnsiTracker;
         $this->buffer = new Buffer(usesStrings: true);
+
+        $this->characterBuffer = new CharacterBuffer(width: $width);
 
         $this->bothBuffers = collect([$this->ansi->buffer, $this->buffer])->each;
     }
@@ -64,28 +68,23 @@ class Screen
 
     public function output(): string
     {
-        // Get the most minimal representation of the ANSI
-        // buffer possible, eliminating all duplicates.
         $ansi = $this->ansi->compressedAnsiBuffer();
+        $printable = $this->characterBuffer->getBuffer();
+        $outputLines = [];
 
-        $buffer = $this->buffer->getBuffer();
+        foreach ($printable as $lineIndex => $line) {
+            // Get ANSI codes for this line (if any).
+            $ansiForLine = $ansi[$lineIndex] ?? [];
+            $lineStr = '';
 
-        foreach ($buffer as $k => &$line) {
-            // At this point, the keys represent the column where the ANSI code should
-            // be placed in the string and the values are the ANSI strings.
-            $ansiForLine = $ansi[$k] ?? [];
-
-            // Sort them in reverse by position so that we can start at the end of the
-            // string and work backwards so that all positions remain valid.
-            krsort($ansiForLine);
-
-            // Now, work backwards through the line inserting the codes.
-            foreach ($ansiForLine as $pos => $code) {
-                $line = mb_substr($line, 0, $pos, 'UTF-8') . $code . mb_substr($line, $pos, null, 'UTF-8');
+            for ($col = 0; $col < count($line); $col++) {
+                $lineStr .= ($ansiForLine[$col] ?? '') . $line[$col];
             }
+
+            $outputLines[] = $lineStr;
         }
 
-        return implode(PHP_EOL, $buffer);
+        return implode(PHP_EOL, $outputLines);
     }
 
     public function write(string $content): static
@@ -96,34 +95,31 @@ class Screen
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
+        $partsCount = count($parts);
 
-        $i = 0;
-
-        while ($i < count($parts)) {
+        for ($i = 0; $i < $partsCount; $i++) {
             $part = $parts[$i];
 
             if ($part instanceof AnsiMatch) {
                 if ($part->command) {
                     $this->handleAnsiCode($part);
-                } else {
-                    // Log::error('Unknown ANSI match:', [
-                    //     'line' => $content,
-                    //     'part' => $part->raw,
-                    // ]);
                 }
             } else {
+                if ($part === '') {
+                    continue;
+                }
+
                 $lines = explode(PHP_EOL, $part);
+                $linesCount = count($lines);
 
                 foreach ($lines as $index => $line) {
                     $this->handlePrintableCharacters($line);
 
-                    if ($index < count($lines) - 1) {
+                    if ($index < $linesCount - 1) {
                         $this->newlineWithScroll();
                     }
                 }
             }
-
-            $i++;
         }
 
         return $this;
@@ -182,11 +178,23 @@ class Screen
         } elseif ($command === 'H') {
             $this->handleAbsoluteMove($ansi->params);
 
+        } elseif ($command === 'I') {
+            $this->handleTabulationMove($paramDefaultOne);
+
         } elseif ($command === 'J') {
             $this->handleEraseDisplay($paramDefaultZero);
 
         } elseif ($command === 'K') {
             $this->handleEraseInLine($paramDefaultZero);
+
+        } elseif ($command === 'L') {
+            $this->handleInsertLines($paramDefaultOne);
+
+        } elseif ($command === 'S') {
+            $this->handleScrollUp($paramDefaultOne);
+
+        } elseif ($command === 'T') {
+            $this->handleScrollDown($paramDefaultOne);
 
         } elseif ($command === 'l' || $command === 'h') {
             // Show/hide cursor. We simply ignore these.
@@ -194,13 +202,17 @@ class Screen
         } elseif ($command === 'm') {
             // Colors / graphics mode
             $this->handleSGR($param);
+
         } elseif ($command === '7') {
             $this->saveCursor();
+
         } elseif ($command === '8') {
             $this->restoreCursor();
+
         } elseif ($param === '?' && in_array($command, ['10', '11'])) {
             // Ask for the foreground or background color.
             $this->handleQueryCode($command, $param);
+
         } elseif ($command === 'n' && $param === '6') {
             // Ask for the cursor position.
             $this->handleQueryCode($command, $param);
@@ -219,189 +231,26 @@ class Screen
         $this->moveCursorCol(absolute: 0);
     }
 
-    /**
-     * Inserts printable text at the current cursor position in the current buffer line.
-     * The insertion respects display widths (using mb_strwidth) so that wide characters,
-     * like emojis, correctly overwrite the appropriate number of columns.
-     */
     protected function handlePrintableCharacters(string $text): void
     {
         if ($text === '') {
             return;
         }
 
-        // Ensure the current row exists.
-        $this->buffer->expand($this->cursorRow);
-        $lineContent = $this->buffer[$this->cursorRow];
+        $this->characterBuffer->expand($this->cursorRow);
 
-        // It's possible that an emoji is occupying columns 1&2, and the
-        // cursor is set to col 2, which means we'd splice a grapheme.
-        // Here we snap backwards to the nearest grapheme boundary.
-        $snapped = $this->snapCursorColToGraphemeBoundary($lineContent, $this->cursorCol);
+        [$advance, $remainder] = $this->characterBuffer->writeString($this->cursorRow, $this->cursorCol, $text);
 
-        // If we moved the cursor back, we need to write in spaces to bring
-        // us back to where we were originally. This puts the cursor in
-        // the right spot without leaving half an emoji behind.
-        if ($this->cursorCol !== $snapped) {
-            $text = str_repeat(' ', $this->cursorCol - $snapped) . $text;
-            $this->cursorCol = $snapped;
-        }
+        $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $this->cursorCol, $this->cursorCol + $advance - 1);
 
-        // Pad the line if the cursor is beyond its current display width.
-        $currentWidth = mb_strwidth($lineContent, 'UTF-8');
-        if ($this->cursorCol > $currentWidth) {
-            $lineContent .= str_repeat(' ', $this->cursorCol - $currentWidth);
-        }
-
-        // Get the portion of the line before the cursor.
-        [$before] = $this->substrByDisplayWidth($lineContent, $this->cursorCol);
-
-        // Determine how many columns remain on this line.
-        $spaceRemaining = $this->width - $this->cursorCol;
-
-        // Get the portion of $text that fits in the remaining space and capture any overflow.
-        [$text, $overflow] = $this->substrByDisplayWidth($text, $spaceRemaining);
-
-        // Calculate the display width of the inserted text.
-        $insertWidth = mb_strwidth($text, 'UTF-8');
-
-        //        if ($text === '🐛️' || $text === '❤️') {
-        //            $text = preg_replace('/[\x{FE00}-\x{FE0F}]/u', '', $text);
-        //            dd([
-        //                '$text' => $text,
-        //                'strlen' => strlen($text),
-        //                'mb_strlen' => mb_strlen($text, 'UTF-8'),
-        //                'mb_strwidth' => mb_strwidth($text, 'UTF-8'),
-        //                'grapheme' => grapheme_strlen($text),
-        //            ]);
-        //        }
-
-        // Now, we need to remove from the current line the columns that will be overwritten.
-        // That is, we skip from the current cursor position to (cursor + insertWidth).
-        $skipCol = $this->cursorCol + $insertWidth;
-
-        // The "after" part is what remains of the line after that skip.
-        [, $after] = $this->substrByDisplayWidth($lineContent, $skipCol);
-
-        // Build the new line by concatenating the "before", inserted text, and "after".
-        $newLine = $before . $text . $after;
-
-        // If the new line exceeds the allowed width, split it.
-        if (mb_strwidth($newLine, 'UTF-8') > $this->width) {
-            [$lineThatFits, $lineOverflow] = $this->substrByDisplayWidth($newLine, $this->width);
-            $newLine = $lineThatFits;
-            // Append the overflow from the line (if any) to the text overflow.
-            $overflow = $lineOverflow . $overflow;
-        }
-
-        // Update the buffer with the newly composed line.
-        $this->buffer[$this->cursorRow] = $newLine;
-
-        if ($text === '🐛️' || $text === '❤️') {
-            //            dd($this->cursorCol, $insertWidth);
-
-            // I think what needs to happen is I think if the string length of a piece of text doesn't match the mb string length of a piece of text, then this row needs to become an array of characters. I don't think we can continue to just keep it as a string. And the array should hold one character per column, even if that character is a multi-byte character. In the instance of a character that spans two columns, the second column that it occupies should be either null or some sort of like a constant so we know that it is a continuation. Where possible, we should keep the rows as strings because that's going to be a lot more memory efficient.
-        }
-
-        // Move the cursor forward by the display width of the inserted text.
-        $this->cursorCol = mb_strlen($before . $text, 'UTF-8');
-
-        // Update the ANSI buffer for active flags if needed.
-        $this->ansi->fillBufferWithActiveFlags(
-            $this->cursorRow,
-            $this->cursorCol - $insertWidth,
-            $this->cursorCol - 1
-        );
+        $this->cursorCol += $advance;
 
         // If there's overflow (i.e. text that didn't fit on this line),
         // move to a new line and recursively handle it.
-        if ($overflow !== '') {
+        if ($remainder !== '') {
             $this->newlineWithScroll();
-            $this->handlePrintableCharacters($overflow);
+            $this->handlePrintableCharacters($remainder);
         }
-    }
-
-    /**
-     * Ensures the cursor never lands in the middle of a wide grapheme.
-     * If $col is inside a multi-width grapheme, we "snap" to the start of that grapheme.
-     */
-    protected function snapCursorColToGraphemeBoundary(string $line, int $col): int
-    {
-        // If the line is empty or the column is at/before zero, no need to adjust.
-        if ($line === '' || $col <= 0) {
-            return max(0, $col);
-        }
-
-        // Break the line into grapheme clusters.
-        if (preg_match_all('/\X/u', $line, $matches) === false) {
-            // If regex fails, just return the requested col as a fallback.
-            return $col;
-        }
-
-        $graphemes = $matches[0];
-        $currentWidth = 0;
-
-        foreach ($graphemes as $g) {
-            $gWidth = mb_strwidth($g, 'UTF-8');
-            $start = $currentWidth;         // inclusive
-            $end = $currentWidth + $gWidth; // exclusive
-
-            // If $col is in the "middle" of this grapheme's columns, snap to the start.
-            if ($col > $start && $col < $end) {
-                return $start;
-            }
-
-            $currentWidth = $end;
-            // If we've already passed the requested col, we can stop checking.
-            if ($currentWidth >= $col) {
-                break;
-            }
-        }
-
-        // If we never found a partial overlap, we can safely return the original col.
-        return $col;
-    }
-
-    /**
-     * Returns an array with two elements:
-     *   [0] => The substring that fits within $maxWidth display columns.
-     *   [1] => The remainder of the string.
-     *
-     * This function uses extended grapheme cluster matching (supported by Symfony's
-     * intl-grapheme polyfill) to ensure that complex characters (emoji, combining marks, etc.)
-     * are not split in half. It measures each cluster's display width using mb_strwidth.
-     *
-     * @param  string  $string  The input string.
-     * @param  int  $maxWidth  The maximum display width (in columns) allowed.
-     * @return array [string $fit, string $remainder]
-     */
-    public function substrByDisplayWidth(string $string, int $maxWidth): array
-    {
-        $width = 0;
-        $fit = '';
-
-        // Split the string into extended grapheme clusters.
-        // Symfony's intl-grapheme polyfill ensures \X works correctly even in older PHP versions.
-        if (preg_match_all('/\X/u', $string, $matches) === false) {
-            // Fallback: if regex fails, simply return the first $maxWidth characters.
-            return [mb_substr($string, 0, $maxWidth, 'UTF-8'), ''];
-        }
-        $graphemes = $matches[0];
-        $i = 0;
-        foreach ($graphemes as $g) {
-            $gWidth = mb_strwidth($g, 'UTF-8');
-            // If adding this grapheme would exceed the max width, stop.
-            if ($width + $gWidth > $maxWidth) {
-                break;
-            }
-            $fit .= $g;
-            $width += $gWidth;
-            $i++;
-        }
-        // The remainder is all the graphemes not included in the fit.
-        $remainder = implode('', array_slice($graphemes, $i));
-
-        return [$fit, $remainder];
     }
 
     public function saveCursor()
@@ -417,7 +266,7 @@ class Screen
         if ($this->stashedCursor) {
             [$col, $row] = $this->stashedCursor;
             $this->moveCursorCol(absolute: $col);
-            $this->moveCursorRow(absolute: $row + $this->linesOffScreen);
+            $this->moveCursorRow(absolute: $row);
             $this->stashedCursor = [];
         }
     }
@@ -460,7 +309,7 @@ class Screen
         $position = $this->cursorRow;
 
         if (!is_null($absolute)) {
-            $position = $absolute;
+            $position = $absolute + $this->linesOffScreen;
         }
 
         if (!is_null($relative)) {
@@ -473,6 +322,7 @@ class Screen
         $this->cursorRow = $position;
 
         $this->buffer->expand($this->cursorRow);
+        $this->characterBuffer->expand($this->cursorRow);
     }
 
     protected function moveCursor(string $direction, ?int $absolute = null, ?int $relative = null): void
@@ -519,6 +369,23 @@ class Screen
         $this->ansi->addAnsiCodes(...$codes);
     }
 
+    protected function handleTabulationMove(int $tabs)
+    {
+        $tabStop = 8;
+
+        // If current column isn't at a tab stop, move to the next one.
+        $remainder = $this->cursorCol % $tabStop;
+        if ($remainder !== 0) {
+            $this->cursorCol += ($tabStop - $remainder);
+            $tabs--; // one tab stop consumed
+        }
+
+        // For any remaining tabs, move by full tab stops.
+        if ($tabs > 0) {
+            $this->cursorCol += $tabs * $tabStop;
+        }
+    }
+
     protected function handleAbsoluteMove(string $params)
     {
         if ($params !== '') {
@@ -538,12 +405,21 @@ class Screen
     protected function handleEraseDisplay(int $param): void
     {
         if ($param === 0) {
+            $this->characterBuffer->clear(
+                startRow: $this->cursorRow,
+                startCol: $this->cursorCol
+            );
             // \e[0J - Erase from cursor until end of screen
             $this->bothBuffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol
             );
         } elseif ($param === 1) {
+            $this->characterBuffer->clear(
+                startRow: $this->linesOffScreen,
+                endRow: $this->cursorRow,
+                endCol: $this->cursorCol
+            );
             // \e[1J - Erase from cursor until beginning of screen
             $this->bothBuffers->clear(
                 startRow: $this->linesOffScreen,
@@ -551,6 +427,11 @@ class Screen
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
+            $this->characterBuffer->clear(
+                startRow: $this->linesOffScreen,
+                endRow: $this->linesOffScreen + $this->height,
+            );
+
             // \e[2J - Erase entire screen
             $this->bothBuffers->clear(
                 startRow: $this->linesOffScreen,
@@ -559,10 +440,72 @@ class Screen
         }
     }
 
+    protected function handleInsertLines(int $lines): void
+    {
+        $allowed = $this->height - ($this->cursorRow - $this->linesOffScreen);
+        $afterCursor = $lines + count($this->characterBuffer->buffer) - $this->cursorRow;
+
+        $chop = $afterCursor - $allowed;
+
+        // Ensure the buffer has enough rows so that $this->cursorRow is defined.
+        if (!isset($this->characterBuffer->buffer[$this->cursorRow])) {
+            $this->characterBuffer->expand($this->cursorRow);
+        }
+
+        if (!isset($this->ansi->buffer->buffer[$this->cursorRow])) {
+            $this->ansi->buffer->expand($this->cursorRow);
+        }
+
+        // Create an array of $lines empty arrays.
+        $newLines = array_fill(0, $lines, []);
+
+        // Insert the new lines at the cursor row index.
+        // array_splice will insert these new arrays and push the existing rows down.
+        array_splice($this->characterBuffer->buffer, $this->cursorRow, 0, $newLines);
+        array_splice($this->ansi->buffer->buffer, $this->cursorRow, 0, $newLines);
+
+        if ($chop > 0) {
+            array_splice($this->characterBuffer->buffer, -$chop);
+            array_splice($this->ansi->buffer->buffer, -$chop);
+        }
+    }
+
+    protected function handleScrollDown(int $param): void
+    {
+        $stash = $this->cursorRow;
+
+        $this->cursorRow = $this->linesOffScreen;
+
+        $this->handleInsertLines($param);
+
+        $this->cursorRow = $stash;
+    }
+
+    protected function handleScrollUp(int $param): void
+    {
+        $stash = $this->cursorRow;
+
+        $this->characterBuffer->expand($this->height);
+
+        $this->cursorRow = count($this->characterBuffer->buffer) + $param - 1;
+
+        $this->handleInsertLines($param);
+
+        $this->linesOffScreen += $param;
+
+        $this->cursorRow = $stash + $param;
+    }
+
     protected function handleEraseInLine(int $param): void
     {
         if ($param === 0) {
             // \e[0K - Erase from cursor to end of line
+            $this->characterBuffer->clear(
+                startRow: $this->cursorRow,
+                startCol: $this->cursorCol,
+                endRow: $this->cursorRow
+            );
+
             $this->bothBuffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol,
@@ -571,6 +514,12 @@ class Screen
 
         } elseif ($param == 1) {
             // \e[1K - Erase start of line to the cursor
+            $this->characterBuffer->clear(
+                startRow: $this->cursorRow,
+                endRow: $this->cursorRow,
+                endCol: $this->cursorCol
+            );
+
             $this->bothBuffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow,
@@ -578,6 +527,11 @@ class Screen
             );
         } elseif ($param === 2) {
             // \e[2K - Erase the entire line
+            $this->characterBuffer->clear(
+                startRow: $this->cursorRow,
+                endRow: $this->cursorRow
+            );
+
             $this->bothBuffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow
