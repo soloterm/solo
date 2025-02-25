@@ -12,7 +12,6 @@ namespace SoloTerm\Solo\Commands\Concerns;
 use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
