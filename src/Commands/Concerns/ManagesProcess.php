@@ -12,6 +12,7 @@ namespace SoloTerm\Solo\Commands\Concerns;
 use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -60,7 +61,7 @@ trait ManagesProcess
             ->command([
                 'bash',
                 '-c',
-                "stty cols {$screen->width} rows {$screen->height} && screen -q " . $this->command,
+                "stty cols {$screen->width} rows {$screen->height} && screen -m -q {$this->command}",
             ])
             ->forever()
             ->timeout(0)
@@ -179,9 +180,14 @@ trait ManagesProcess
             // Keep track of when we tried to stop.
             $this->stopInitiatedAt ??= Carbon::now();
 
-            // Ask for a graceful shutdown. If it isn't
-            // respected, we'll force kill it later.
-            $this->process->signal(SIGTERM);
+            foreach ($this->children as $pid) {
+                $command = trim(shell_exec("ps -o command= -p $pid"));
+
+                // If it doesn't contain 'screen' or 'SCREEN', it's likely our actual command
+                if (!Str::startsWith($command, 'screen') && !Str::startsWith($command, 'SCREEN')) {
+                    posix_kill((int) $pid, SIGTERM);
+                }
+            }
         }
     }
 
