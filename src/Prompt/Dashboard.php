@@ -14,6 +14,7 @@ use Chewie\Concerns\CreatesAnAltScreen;
 use Chewie\Concerns\Loops;
 use Chewie\Concerns\SetsUpAndResets;
 use Illuminate\Support\Collection;
+use Laravel\Prompts\Key;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\Terminal;
 use SoloTerm\Solo\Commands\Command;
@@ -272,7 +273,7 @@ class Dashboard extends Prompt
         }
     }
 
-    protected function handleInteractiveInput()
+    protected function handleInteractiveInput(): void
     {
         $read = [STDIN];
         $write = null;
@@ -300,8 +301,83 @@ class Dashboard extends Prompt
                 return;
             }
 
+            $this->handleBeforeSending($key);
+        }
+    }
+
+    public function handleBeforeSending($key): void
+    {
+        if (!$this->currentCommand()->isInteractive()) {
+            return;
+        }
+        static $currentLineLength = 0;
+        static $cursorPosition = 0;
+
+        // Handle ANSI escape sequences (for cursor movement)
+        if (preg_match('/^\x1b\[([0-9;]*)([A-Za-z])/', $key, $matches)) {
+            [$full, $params, $command] = $matches;
+            switch ($command) {
+                case 'D': // Left arrow / Cursor backwards
+                    $amount = $params ?: 1;
+                    $cursorPosition = max(0, $cursorPosition - $amount);
+                    // we need to log how many characters there are left
+                    break;
+                case 'C': // Right arrow / Cursor forwards
+                    $amount = $params ?: 1;
+                    $cursorPosition = min($currentLineLength, $cursorPosition + $amount);
+                    break;
+
+                // NOTE: We need to correctly handle these cases, because currently if there is no more input left to
+                //  scroll through the process gets angry.
+                case 'A': // Up arrow / Mouse up
+                    $amount = $params ?: 1;
+                    // Adjust `cursorPosition` with an assumed line length for multiline input
+                    $cursorPosition = max(0, $cursorPosition - ($amount * $this->width));
+                    // TODO: the output that gets added to the screen from the up arrow,
+                    //  needs to replace the $currentLineLength as it overrides our input
+                    //  because backspace doesn't work or anytning...
+                    $this->currentCommand()->sendInput($key);
+                    break;
+                case 'B': // Down arrow / Mouse Down
+                    $amount = $params ?: 1;
+                    // TODO: the output that gets added to the screen from the down arrow
+                    //  needs to replace the $currentLineLength as it overrides our input
+                    //  backspace doesn;t work or anytning...
+                    // Adjust `cursorPosition` with an assumed line length for multiline input
+                    // $cursorPosition = min($currentLineLength, $cursorPosition + ($amount * $currentLineLength));
+                    $cursorPosition = min($currentLineLength, $cursorPosition + ($amount * $this->width));
+                    $this->currentCommand()->sendInput($key);
+                    break;
+
+            }
+
+            if ($cursorPosition < 0 || $cursorPosition >= $currentLineLength) {
+                // Log::debug("Cursor position out of bounds: {$cursorPosition}");
+                return;
+            }
+
             $this->currentCommand()->sendInput($key);
         }
+
+            return;
+        }
+        if ($key === Key::BACKSPACE || $key === Key::DELETE || $key === "\x08" || $key === "\x7f") {
+            if ($cursorPosition <= 0) {
+                return; // Ignore backspace at start of line
+            }
+            $cursorPosition--;
+            $currentLineLength--;
+        } else if ($key === "\r" || $key === Key::ENTER) {
+            // Reset input tracking
+            $currentLineLength = 0;
+            $cursorPosition = 0;
+        } else { // Handle normal characters
+            $length = mb_strlen($key);
+            $currentLineLength += $length;
+            $cursorPosition += $length;
+        }
+
+        $this->currentCommand()->sendInput($key);
     }
 
     public function quit(): void
