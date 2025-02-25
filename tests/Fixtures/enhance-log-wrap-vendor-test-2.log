@@ -1,0 +1,102 @@
+#37 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Cookie\\Middleware\\EncryptCookies->handle(Object(Illuminate\\Http\\Request), Object(Closure))[2;1H
+#38 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(127): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[3;1H
+#39 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Routing/Router.php(807): Illuminate\\Pipeline\\Pipeline->then(Object(Closure))[4;1H
+#40 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Routing/Router.php(786): Illuminate\\Routing\\Router->runRouteWithinStack(Object(Illuminate\\Routing\\Route), Object(Illuminate\\Http\\Request))[5;1H
+#41 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Routing/Router.php(750): Illuminate\\Routing\\Router->runRoute(Object(Illuminate\\Http\\Request), Object(Illuminate\\Routing\\Route))[6;1H
+#42 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Routing/Router.php(739): Illuminate\\Routing\\Router->dispatchToRoute(Object(Illuminate\\Http\\Request))[7;1H
+#43 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(201): Illuminate\\Routing\\Router->dispatch(Object(Illuminate\\Http\\Request))[8;1H
+#44 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(170): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}(Object(Illuminate\\Http\\Request))[9;1H
+#45 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[10;1H
+#46 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle(Object(Illuminate\\Http\\Request), Object(Closure))[11;1H
+#47 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle(Object(Illuminate\\Http\\Request), Object(Closure))[12;1H
+#48 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[13;1H
+#49 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle(Object(Illuminate\\Http\\Request), Object(Closure))[14;1H
+#50 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle(Object(Illuminate\\Http\\Request), Object(Closure))[15;1H
+#51 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[16;1H
+#52 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Http\\Middleware\\ValidatePostSize->handle(Object(Illuminate\\Http\\Request), Object(Closure))[17;1H
+#53 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(110): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[18;1H
+#54 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle(Object(Illuminate\\Http\\Request), Object(Closure))[19;1H
+#55 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(49): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[20;1H
+#56 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Http\\Middleware\\HandleCors->handle(Object(Illuminate\\Http\\Request), Object(Closure))[21;1H
+#57 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[22;1H
+#58 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Http\\Middleware\\TrustProxies->handle(Object(Illuminate\\Http\\Request), Object(Closure))[23;1H
+#59 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[24;1H
+#60 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(209): Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks->handle(Object(Illuminate\\Http\\Request), Object(Closure))[25;1H
+#61 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(127): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}(Object(Illuminate\\Http\\Request))[26;1H
+#62 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(176): Illuminate\\Pipeline\\Pipeline->then(Object(Closure))[27;1H
+#63 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(145): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter(Object(Illuminate\\Http\\Request))[28;1H
+#64 /Users/aaron/Code/fusioncast/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1216): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))[29;1H
+#65 /Users/aaron/Code/fusioncast/public/index.php(17): Illuminate\\Foundation\\Application->handleRequest(Object(Illuminate\\Http\\Request))[30;1H
+#66 /Applications/Herd.app/Contents/Resources/valet/server.php(167): require('/Users/aaron/Co...')[30;1H
+#67 {main}[30;1H
+"}[30;1H
+[2025-02-05 14:49:58] local.ERROR: Too few arguments to function Illuminate\Support\Str::contains(), 1 passed in /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php on line 121 and at least 2 expected {"exception":"[object] (ArgumentCountError(code: 0): Too few arguments to function Illuminate\\Support\\Str::contains(), 1 passed in /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php on line 121 and at least 2 expected at /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Support/Str.php:253)[30;1H
+[stacktrace][30;1H
+#
+0 /Users/aaron/Code/solo/src/Commands/EnhancedTxxxCommand.php(121): Illuminate\\Support\\Str::contains('[...]')[30;1H
+#1 /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php(109): SoloTerm\\Solo\\Commands\\EnhancedTailCommand->showWrappedLines()[30;1H
+#2 [internal function]: SoloTerm\\Solo\\Commands\\EnhancedTailCommand->toggleWrappedLines()[30;1H
+#3 /Users/aaron/Code/solo/src/Hotkeys/Hotkey.php(165): call_user_func(Object(Closure))[30;1H
+#4 /Users/aaron/Code/solo/src/Hotkeys/Hotkey.php(72): SoloTerm\\Solo\\Hotkeys\\Hotkey->callWithParams(Object(Closure))[30;1H
+#5 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Input/KeyPressListener.php(178): SoloTerm\\Solo\\Hotkeys\\Hotkey->handle('w')[30;1H
+#6 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Input/KeyPressListener.php(35): Chewie\\Input\\KeyPressListener->handleKey('w')[30;1H
+#7 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(236): Chewie\\Input\\KeyPressListener->once()[30;1H
+#8 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Concerns/Loops.php(40): SoloTerm\\Solo\\Prompt\\Dashboard->renderSingleFrame(Object(SoloTerm\\Solo\\Prompt\\Dashboard))[30;1H
+#9 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(211): SoloTerm\\Solo\\Prompt\\Dashboard->loop(Object(Closure), 25000)[30;1H
+#10 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Concerns/SetsUpAndResets.php(37): SoloTerm\\Solo\\Prompt\\Dashboard->showDashboard()[30;1H
+#11 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(119): SoloTerm\\Solo\\Prompt\\Dashboard->setup(Object(Closure))[30;1H
+#12 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(54): SoloTerm\\Solo\\Prompt\\Dashboard->run()[30;1H
+#13 /Users/aaron/Code/solo/src/Console/Commands/Solo.php(26): SoloTerm\\Solo\\Prompt\\Dashboard::start()[30;1H
+#14 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): SoloTerm\\Solo\\Console\\Commands\\Solo->handle()[30;1H
+#15 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/Util.php(41): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()[30;1H
+#16 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(93): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))[30;1H
+#17 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))[30;1H
+#18 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/Container.php(662): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)[30;1H
+#19 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Console/Command.php(212): Illuminate\\Container\\Container->call(Array)[30;1H
+#20 /Users/aaron/Code/solo/vendor/symfony/console/Command/Command.php(279): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))[30;1H
+#21 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Console/Command.php(181): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))[30;1H
+#22 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(1049): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#23 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(318): Symfony\\Component\\Console\\Application->doRunCommand(Object(SoloTerm\\Solo\\Console\\Commands\\Solo), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#24 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(169): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#25 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(196): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#26 /Users/aaron/Code/solo/vendor/orchestra/testbench-core/src/Console/Commander.php(114): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#27 /Users/aaron/Code/solo/vendor/orchestra/testbench-core/testbench(23): Orchestra\\Testbench\\Console\\Commander->handle()[30;1H
+#28 /Users/aaron/Code/solo/vendor/bin/testbench(119): include('/Users/aaron/Co...')[30;1H
+#29 {main}[30;1H
+"} [30;1H
+[2025-02-05 19:33:47] local.ERROR: Unsupported operand types: string - int {"exception":"[object] (TypeError(code: 0): Unsupported operand types: string - int at /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php:258)[30;1H
+[stacktrace][30;1H
+#
+0 /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php(288): SoloTerm\\Solo\\Commands\\EnhancedTailCommand->formatInitialException('[2025-02-05 14:...')[30;1H
+#1 [internal function]: SoloTerm\\Solo\\Commands\\EnhancedTailCommand->formatLogLine('[2025-02-05 14:...', 67)[30;1H
+#2 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Collections/Arr.php(605): array_map(Object(Closure), Array, Array)[30;1H
+#3 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Collections/Collection.php(777): Illuminate\\Support\\Arr::map(Array, Object(Closure))[30;1H
+#4 /Users/aaron/Code/solo/src/Commands/EnhancedTailCommand.php(206): Illuminate\\Support\\Collection->map(Object(Closure))[30;1H
+#5 /Users/aaron/Code/solo/src/Commands/Command.php(279): SoloTerm\\Solo\\Commands\\EnhancedTailCommand->modifyWrappedLines(Object(Illuminate\\Support\\Collection))[30;1H
+#6 /Users/aaron/Code/solo/src/Prompt/Renderer.php(241): SoloTerm\\Solo\\Commands\\Command->wrappedLines()[30;1H
+#7 /Users/aaron/Code/solo/src/Prompt/Renderer.php(58): SoloTerm\\Solo\\Prompt\\Renderer->renderContentPane()[30;1H
+#8 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(252): SoloTerm\\Solo\\Prompt\\Renderer->__invoke(Object(SoloTerm\\Solo\\Prompt\\Dashboard))[30;1H
+#9 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(231): SoloTerm\\Solo\\Prompt\\Dashboard->render()[30;1H
+#10 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Concerns/Loops.php(40): SoloTerm\\Solo\\Prompt\\Dashboard->renderSingleFrame(Object(SoloTerm\\Solo\\Prompt\\Dashboard))[30;1H
+#11 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(211): SoloTerm\\Solo\\Prompt\\Dashboard->loop(Object(Closure), 25000)[30;1H
+#12 /Users/aaron/Code/solo/vendor/joetannenbaum/chewie/src/Concerns/SetsUpAndResets.php(37): SoloTerm\\Solo\\Prompt\\Dashboard->showDashboard()[30;1H
+#13 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(119): SoloTerm\\Solo\\Prompt\\Dashboard->setup(Object(Closure))[30;1H
+#14 /Users/aaron/Code/solo/src/Prompt/Dashboard.php(54): SoloTerm\\Solo\\Prompt\\Dashboard->run()[30;1H
+#15 /Users/aaron/Code/solo/src/Console/Commands/Solo.php(26): SoloTerm\\Solo\\Prompt\\Dashboard::start()[30;1H
+#16 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): SoloTerm\\Solo\\Console\\Commands\\Solo->handle()[30;1H
+#17 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/Util.php(41): Illuminate\\Container\\BoundMethod::Illuminate\\Container\\{closure}()[30;1H
+#18 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(93): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))[30;1H
+#19 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Array, Object(Closure))[30;1H
+#20 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Container/Container.php(662): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Array, Array, NULL)[30;1H
+#21 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Console/Command.php(212): Illuminate\\Container\\Container->call(Array)[30;1H
+#22 /Users/aaron/Code/solo/vendor/symfony/console/Command/Command.php(279): Illuminate\\Console\\Command->execute(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle))[30;1H
+#23 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Console/Command.php(181): Symfony\\Component\\Console\\Command\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Illuminate\\Console\\OutputStyle)) this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap this is a very long string and it should hopefully wrap[30;1H
+#24 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(1049): Illuminate\\Console\\Command->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#25 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(318): Symfony\\Component\\Console\\Application->doRunCommand(Object(SoloTerm\\Solo\\Console\\Commands\\Solo), Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#26 /Users/aaron/Code/solo/vendor/symfony/console/Application.php(169): Symfony\\Component\\Console\\Application->doRun(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#27 /Users/aaron/Code/solo/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(196): Symfony\\Component\\Console\\Application->run(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#28 /Users/aaron/Code/solo/vendor/orchestra/testbench-core/src/Console/Commander.php(114): Illuminate\\Foundation\\Console\\Kernel->handle(Object(Symfony\\Component\\Console\\Input\\ArgvInput), Object(Symfony\\Component\\Console\\Output\\ConsoleOutput))[30;1H
+#29 /Users/aaron/Code/solo/vendor/orchestra/testbench-core/testbench(23): Orchestra\\Testbench\\Console\\Commander->handle()[30;1H
+#30 /Users/aaron/Code/solo/vendor/bin/testbench(119): include('/Users/aaron/Co...')[30;1H
+#31 {main}[30;1H
+"} [30;1H

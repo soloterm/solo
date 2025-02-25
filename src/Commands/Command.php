@@ -168,8 +168,7 @@ class Command implements Loopable
     */
     public function dd()
     {
-        $this->wrappedLines()->dd();
-        exit();
+        dd($this->screen->output());
     }
 
     public function addOutput($text)
