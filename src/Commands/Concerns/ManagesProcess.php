@@ -20,6 +20,7 @@ use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
+use Illuminate\Support\Facades\Config;
 
 trait ManagesProcess
 {
@@ -53,15 +54,16 @@ trait ManagesProcess
         // https://github.com/derailed/k9s/issues/2810
 
         $screen = $this->makeNewScreen();
+        $useScreenCommand = Config::boolean('solo.use_screen');
 
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            // ->command($command)
-            ->command([
+            ->when($useScreenCommand, fn (PendingProcess $process) => $process->command([
                 'bash',
                 '-c',
                 "stty cols {$screen->width} rows {$screen->height} && screen -q " . $this->command,
-            ])
+            ]))
+            ->when(!$useScreenCommand, fn (PendingProcess $process) => $process->command($command))
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)

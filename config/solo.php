@@ -60,6 +60,12 @@ return [
         'Tests' => Command::from('php artisan test --colors=always')->withEnv(['APP_ENV' => 'testing'])->lazy(),
     ],
 
+    /**
+     * Some environments do not have the `screen`-command installed.
+     * You can disable the use of it by disabling this config value.
+     */
+    'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
+
     /*
     |--------------------------------------------------------------------------
     | Miscellaneous
