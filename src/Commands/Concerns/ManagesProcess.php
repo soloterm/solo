@@ -244,9 +244,14 @@ trait ManagesProcess
             // Keep track of when we tried to stop.
             $this->stopInitiatedAt ??= Carbon::now();
 
-            // Ask for a graceful shutdown. If it isn't
-            // respected, we'll force kill it later.
-            $this->process->signal(SIGTERM);
+            foreach ($this->children as $pid) {
+                $command = trim(shell_exec("ps -o command= -p $pid"));
+
+                // If it doesn't contain 'screen' or 'SCREEN', it's likely our actual command
+                if (!Str::startsWith($command, 'screen') && !Str::startsWith($command, 'SCREEN')) {
+                    posix_kill((int) $pid, SIGTERM);
+                }
+            }
         }
     }
 
