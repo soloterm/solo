@@ -125,5 +125,4 @@ class PrintableBuffer extends Buffer
 
         return [$advanceCursor, $remainder];
     }
-
 }
