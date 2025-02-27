@@ -52,7 +52,7 @@ return [
         'Make' => new MakeCommand,
         // 'HTTP' => 'php artisan serve',
 
-        // Lazy commands do no automatically start when Solo starts.
+        // Lazy commands do not automatically start when Solo starts.
         'Dumps' => Command::from('php artisan solo:dumps')->lazy(),
         'Reverb' => Command::from('php artisan reverb:start --debug')->lazy(),
         'Pint' => Command::from('./vendor/bin/pint --ansi')->lazy(),
