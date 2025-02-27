@@ -225,7 +225,7 @@ class Screen
 
     protected function newlineWithScroll()
     {
-        if ($this->cursorRow >= $this->height - 1) {
+        if (($this->cursorRow - $this->linesOffScreen) >= $this->height - 1) {
             $this->linesOffScreen++;
         }
 

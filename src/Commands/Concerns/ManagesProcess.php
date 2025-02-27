@@ -99,10 +99,28 @@ trait ManagesProcess
         $local = $this->localeEnvironmentVariables();
         $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
 
-        $inner = sprintf(
-            "printf '%%s' %s; %s; printf '%%s' %s",
-            $this->outputStartMarker,
+        // If there's already content in the screen then we have to do a bit of trickery. `screen` relies
+        // on absolute move codes like \e[3;1H. If we don't echo these newlines in, then the absolute
+        // moves will be wrong. We echo as many newlines as are currently present in the screen.
+
+        // We echo those *before* the outputStartMarker, so they never make it back into our Screen
+        // instance, which is correct. We also add a single line to the screen itself to make
+        // sure we're clear of the existing content.
+        if ($lines = count($this->screen->printable->buffer)) {
+            $newlines = str_repeat("\n", $lines);
+            $this->screen->write("\n");
+        } else {
+            $newlines = '';
+        }
+
+        // We have to add a 250ms delay because some commands can print so much
+        // output that screen will terminate before PHP can grab it all.
+        // 250ms seems to work, although it's totally arbitrary.
+        $inner = sprintf("printf '%%s' %s; %s; sleep 0.25; printf '%%s' %s",
+            // `screen` spams output with a bunch of ANSI codes that we want to ignore.
+            escapeshellarg($newlines . $this->outputStartMarker),
             $this->command,
+            // `screen` prints "[screen is terminating]" along with more ANSI codes.
             $this->outputEndMarker
         );
 

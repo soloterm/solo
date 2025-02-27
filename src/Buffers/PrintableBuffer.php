@@ -125,4 +125,9 @@ class PrintableBuffer extends Buffer
 
         return [$advanceCursor, $remainder];
     }
+
+    public function lines(): array
+    {
+        return array_map(fn($line) => implode('', $line), $this->buffer);
+    }
 }

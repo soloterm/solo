@@ -929,4 +929,31 @@ TXT;
         $this->assertTerminalMatch("\x7fabcde");
     }
 
+    #[Test]
+    public function start_stop_test(): void
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $this->assertTerminalMatch([
+            implode(PHP_EOL, range(0, $height)),
+            "\e[1000E" . str_repeat(PHP_EOL, $height - 1) . "\e[H",
+            "new content"
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function start_stop_test2()
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $this->assertTerminalMatch([
+            '123[1000E@',
+            ...range(1, $height-3),
+            '[HLine 1[H',
+            'Line 2[2;1H',
+            'Line 3[3;1H',
+            'd',
+        ]);
+    }
+
 }
