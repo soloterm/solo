@@ -1,19 +1,21 @@
 <?php
 
-namespace SoloTerm\Solo\Support;
+namespace SoloTerm\Solo\Buffers;
 
 use Exception;
 use SoloTerm\Grapheme\Grapheme;
 
-class CharacterBuffer
+class PrintableBuffer extends Buffer
 {
-    public array $buffer = [];
-
     public int $width;
 
-    public function __construct(int $width)
+    protected mixed $valueForClearing = ' ';
+
+    public function setWidth(int $width): static
     {
         $this->width = $width;
+
+        return $this;
     }
 
     /**
@@ -122,80 +124,6 @@ class CharacterBuffer
         $remainder = implode('', array_slice($units, $i));
 
         return [$advanceCursor, $remainder];
-    }
-
-    public function expand($rows)
-    {
-        while (count($this->buffer) <= $rows) {
-            $this->buffer[] = [];
-        }
-    }
-
-    protected function normalizeClearColumns(int $currentRow, int $startRow, int $startCol, int $endRow, int $endCol)
-    {
-        if ($startRow === $endRow) {
-            $cols = [$startCol, $endCol];
-        } elseif ($currentRow === $startRow) {
-            $cols = [$startCol, PHP_INT_MAX];
-        } elseif ($currentRow === $endRow) {
-            $cols = [0, $endCol];
-        } else {
-            $cols = [0, PHP_INT_MAX];
-        }
-
-        return [
-            max($cols[0], 0),
-            min($cols[1], count($this->buffer[$currentRow]) - 1),
-        ];
-    }
-
-    public function clear(
-        int $startRow = 0,
-        int $startCol = 0,
-        int $endRow = PHP_INT_MAX,
-        int $endCol = PHP_INT_MAX
-    ) {
-        // Short-circuit if we're clearing the whole buffer.
-        if ($startRow === 0 && $startCol === 0 && $endRow === PHP_INT_MAX && $endCol === PHP_INT_MAX) {
-            $this->buffer = [];
-
-            return;
-        }
-
-        $endRow = min($endRow, count($this->buffer) - 1);
-
-        for ($row = $startRow; $row <= $endRow; $row++) {
-            if (!array_key_exists($row, $this->buffer)) {
-                continue;
-            }
-            $cols = $this->normalizeClearColumns($row, $startRow, $startCol, $endRow, $endCol);
-
-            $line = $this->buffer[$row];
-            $length = count($this->buffer[$row]) - 1;
-
-            if ($cols[0] === 0 && $cols[1] === $length) {
-                // Clearing an entire line. Benchmarked slightly
-                // faster to just replace the entire row.
-                $this->buffer[$row] = [];
-            } elseif ($cols[0] > 0 && $cols[1] === $length) {
-                // Clearing from cols[0] to the end of the line.
-                $this->buffer[$row] = array_slice($line, 0, $cols[0]);
-            } else {
-                // Clearing the middle of a row. Fill with either 0s or spaces.
-                $this->fill(' ', $row, $cols[0], $cols[1]);
-            }
-        }
-    }
-
-    public function fill(mixed $value, int $row, int $startCol, int $endCol)
-    {
-        $this->expand($row);
-
-        $line = $this->buffer[$row];
-
-        $this->buffer[$row] = array_replace(
-            $line, array_fill_keys(range($startCol, $endCol), $value)
-        );
     }
 
     public function getBuffer(): array

@@ -7,7 +7,7 @@
  * @link https://x.com/aarondfrancis
  */
 
-namespace SoloTerm\Solo\Support;
+namespace SoloTerm\Solo\Buffers;
 
 use ArrayAccess;
 use ReturnTypeWillChange;
@@ -16,9 +16,13 @@ class Buffer implements ArrayAccess
 {
     public array $buffer = [];
 
-    public function __construct(public bool $usesStrings = false, public int $max = 5000)
+    protected mixed $valueForClearing = 0;
+
+    public function __construct(public int $max = 5000)
     {
-        //
+        if (method_exists($this, 'initialize')) {
+            $this->initialize();
+        }
     }
 
     public function getBuffer()
@@ -53,19 +57,14 @@ class Buffer implements ArrayAccess
             if ($cols[0] === 0 && $cols[1] === $length) {
                 // Clearing an entire line. Benchmarked slightly
                 // faster to just replace the entire row.
-                $this->buffer[$row] = $this->usesStrings ? '' : [];
+                $this->buffer[$row] = [];
             } elseif ($cols[0] > 0 && $cols[1] === $length) {
                 // Clearing from cols[0] to the end of the line.
-                $this->buffer[$row] = $this->usesStrings
-                    // Chop off the end of the string.
-                    ? mb_substr($line, 0, $cols[0], 'UTF-8')
-                    // Chop off the end of the array.
-                    : array_slice($line, 0, $cols[0]);
+                // Chop off the end of the array.
+                $this->buffer[$row] = array_slice($line, 0, $cols[0]);
             } else {
                 // Clearing the middle of a row. Fill with either 0s or spaces.
-                $this->fill(
-                    ($this->usesStrings ? ' ' : 0), $row, $cols[0], $cols[1]
-                );
+                $this->fill($this->valueForClearing, $row, $cols[0], $cols[1]);
             }
         }
     }
@@ -73,7 +72,7 @@ class Buffer implements ArrayAccess
     public function expand($rows)
     {
         while (count($this->buffer) <= $rows) {
-            $this->buffer[] = $this->usesStrings ? '' : [];
+            $this->buffer[] = [];
         }
     }
 
@@ -83,26 +82,16 @@ class Buffer implements ArrayAccess
 
         $line = $this->buffer[$row];
 
-        if ($this->usesStrings) {
-            $replacement = str_repeat($value, $endCol - $startCol + 1);
-            $beforeStart = mb_substr($line, 0, $startCol, 'UTF-8');
-            $afterEnd = mb_substr($line, $endCol + 1, null, 'UTF-8');
-
-            $this->buffer[$row] = $beforeStart . $replacement . $afterEnd;
-        } else {
-            $this->buffer[$row] = array_replace(
-                $line, array_fill_keys(range($startCol, $endCol), $value)
-            );
-        }
+        $this->buffer[$row] = array_replace(
+            $line, array_fill_keys(range($startCol, $endCol), $value)
+        );
 
         $this->trim();
     }
 
     public function rowMax($row)
     {
-        $line = $this->buffer[$row];
-
-        return $this->usesStrings ? mb_strlen($line, 'UTF-8') : count($line) - 1;
+        return count($this->buffer[$row]) - 1;
     }
 
     public function trim()
@@ -119,7 +108,7 @@ class Buffer implements ArrayAccess
         if ($excess > 0) {
             $keys = array_keys($this->buffer);
             $remove = array_slice($keys, 0, $excess);
-            $nulls = array_fill_keys($remove, $this->usesStrings ? '' : []);
+            $nulls = array_fill_keys($remove, []);
 
             $this->buffer = array_replace($this->buffer, $nulls);
         }

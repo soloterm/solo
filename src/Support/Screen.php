@@ -11,14 +11,16 @@ namespace SoloTerm\Solo\Support;
 
 use Closure;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HigherOrderCollectionProxy;
+use SoloTerm\Solo\Buffers\AnsiBuffer;
+use SoloTerm\Solo\Buffers\Buffer;
+use SoloTerm\Solo\Buffers\PrintableBuffer;
 
 class Screen
 {
-    public AnsiTracker $ansi;
+    public AnsiBuffer $ansi;
 
-    public Buffer $buffer;
+    public PrintableBuffer $printable;
 
     /**
      * A higher-order collection of both the Screen and ANSI buffers
@@ -29,7 +31,7 @@ class Screen
      *
      * @noinspection PhpDocFieldTypeMismatchInspection
      */
-    public HigherOrderCollectionProxy $bothBuffers;
+    public HigherOrderCollectionProxy $buffers;
 
     public int $cursorRow = 0;
 
@@ -45,18 +47,15 @@ class Screen
 
     protected array $stashedCursor = [];
 
-    protected CharacterBuffer $characterBuffer;
-
     public function __construct(int $width, int $height)
     {
         $this->width = $width;
         $this->height = $height;
-        $this->ansi = new AnsiTracker;
-        $this->buffer = new Buffer(usesStrings: true);
 
-        $this->characterBuffer = new CharacterBuffer(width: $width);
+        $this->ansi = new AnsiBuffer;
+        $this->printable = (new PrintableBuffer)->setWidth($width);
 
-        $this->bothBuffers = collect([$this->ansi->buffer, $this->buffer])->each;
+        $this->buffers = collect([$this->ansi, $this->printable])->each;
     }
 
     public function respondToQueriesVia(Closure $closure): static
@@ -69,7 +68,7 @@ class Screen
     public function output(): string
     {
         $ansi = $this->ansi->compressedAnsiBuffer();
-        $printable = $this->characterBuffer->getBuffer();
+        $printable = $this->printable->getBuffer();
         $outputLines = [];
 
         foreach ($printable as $lineIndex => $line) {
@@ -237,9 +236,9 @@ class Screen
             return;
         }
 
-        $this->characterBuffer->expand($this->cursorRow);
+        $this->printable->expand($this->cursorRow);
 
-        [$advance, $remainder] = $this->characterBuffer->writeString($this->cursorRow, $this->cursorCol, $text);
+        [$advance, $remainder] = $this->printable->writeString($this->cursorRow, $this->cursorCol, $text);
 
         $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $this->cursorCol, $this->cursorCol + $advance - 1);
 
@@ -321,8 +320,7 @@ class Screen
 
         $this->cursorRow = $position;
 
-        $this->buffer->expand($this->cursorRow);
-        $this->characterBuffer->expand($this->cursorRow);
+        $this->printable->expand($this->cursorRow);
     }
 
     protected function moveCursor(string $direction, ?int $absolute = null, ?int $relative = null): void
@@ -405,35 +403,35 @@ class Screen
     protected function handleEraseDisplay(int $param): void
     {
         if ($param === 0) {
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol
             );
             // \e[0J - Erase from cursor until end of screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol
             );
         } elseif ($param === 1) {
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
             // \e[1J - Erase from cursor until beginning of screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->linesOffScreen + $this->height,
             );
 
             // \e[2J - Erase entire screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->linesOffScreen + $this->height,
             );
@@ -443,17 +441,17 @@ class Screen
     protected function handleInsertLines(int $lines): void
     {
         $allowed = $this->height - ($this->cursorRow - $this->linesOffScreen);
-        $afterCursor = $lines + count($this->characterBuffer->buffer) - $this->cursorRow;
+        $afterCursor = $lines + count($this->printable->buffer) - $this->cursorRow;
 
         $chop = $afterCursor - $allowed;
 
         // Ensure the buffer has enough rows so that $this->cursorRow is defined.
-        if (!isset($this->characterBuffer->buffer[$this->cursorRow])) {
-            $this->characterBuffer->expand($this->cursorRow);
+        if (!isset($this->printable->buffer[$this->cursorRow])) {
+            $this->printable->expand($this->cursorRow);
         }
 
-        if (!isset($this->ansi->buffer->buffer[$this->cursorRow])) {
-            $this->ansi->buffer->expand($this->cursorRow);
+        if (!isset($this->ansi->buffer[$this->cursorRow])) {
+            $this->ansi->expand($this->cursorRow);
         }
 
         // Create an array of $lines empty arrays.
@@ -461,12 +459,12 @@ class Screen
 
         // Insert the new lines at the cursor row index.
         // array_splice will insert these new arrays and push the existing rows down.
-        array_splice($this->characterBuffer->buffer, $this->cursorRow, 0, $newLines);
-        array_splice($this->ansi->buffer->buffer, $this->cursorRow, 0, $newLines);
+        array_splice($this->printable->buffer, $this->cursorRow, 0, $newLines);
+        array_splice($this->ansi->buffer, $this->cursorRow, 0, $newLines);
 
         if ($chop > 0) {
-            array_splice($this->characterBuffer->buffer, -$chop);
-            array_splice($this->ansi->buffer->buffer, -$chop);
+            array_splice($this->printable->buffer, -$chop);
+            array_splice($this->ansi->buffer, -$chop);
         }
     }
 
@@ -485,9 +483,9 @@ class Screen
     {
         $stash = $this->cursorRow;
 
-        $this->characterBuffer->expand($this->height);
+        $this->printable->expand($this->height);
 
-        $this->cursorRow = count($this->characterBuffer->buffer) + $param - 1;
+        $this->cursorRow = count($this->printable->buffer) + $param - 1;
 
         $this->handleInsertLines($param);
 
@@ -500,13 +498,13 @@ class Screen
     {
         if ($param === 0) {
             // \e[0K - Erase from cursor to end of line
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol,
                 endRow: $this->cursorRow
             );
 
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol,
                 endRow: $this->cursorRow
@@ -514,25 +512,25 @@ class Screen
 
         } elseif ($param == 1) {
             // \e[1K - Erase start of line to the cursor
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
 
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
             // \e[2K - Erase the entire line
-            $this->characterBuffer->clear(
+            $this->printable->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow
             );
 
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow
             );

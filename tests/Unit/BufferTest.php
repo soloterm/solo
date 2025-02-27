@@ -10,7 +10,7 @@
 namespace SoloTerm\Solo\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Support\Buffer;
+use SoloTerm\Solo\Buffers\Buffer;
 
 class BufferTest extends Base
 {

@@ -7,18 +7,14 @@
  * @link https://x.com/aarondfrancis
  */
 
-namespace SoloTerm\Solo\Support;
+namespace SoloTerm\Solo\Buffers;
 
 use InvalidArgumentException;
 use RuntimeException;
 
-class AnsiTracker
+class AnsiBuffer extends Buffer
 {
-    /**
-     * The buffer that stores ANSI codes for each cell as either a pure integer
-     * or as an array, if there are extended foreground and backgrounds.
-     */
-    public Buffer $buffer;
+    protected mixed $valueForClearing = 0;
 
     /**
      * The active integer bitmask representing current standard ANSI
@@ -92,7 +88,7 @@ class AnsiTracker
         9 => 29,
     ];
 
-    public function __construct()
+    public function initialize()
     {
         if (PHP_INT_SIZE < 8) {
             throw new RuntimeException(static::class . ' requires a 64-bit PHP environment.');
@@ -119,9 +115,6 @@ class AnsiTracker
 
             return $carry;
         }, []);
-
-        // This buffer uses integers and arrays to keep track of active ANSI codes.
-        $this->buffer = new Buffer(usesStrings: false);
     }
 
     /**
@@ -144,7 +137,7 @@ class AnsiTracker
 
     public function fillBufferWithActiveFlags(int $row, int $startCol, int $endCol): void
     {
-        $this->buffer->fill($this->cellValue(), $row, $startCol, $endCol);
+        $this->fill($this->cellValue(), $row, $startCol, $endCol);
     }
 
     public function getActive(): int
@@ -159,7 +152,7 @@ class AnsiTracker
 
     public function compressedAnsiBuffer(): array
     {
-        $lines = $this->buffer->getBuffer();
+        $lines = $this->buffer;
 
         return array_map(function ($line) {
             // We reset the previous cell on every single line, because we're not guaranteed that the
