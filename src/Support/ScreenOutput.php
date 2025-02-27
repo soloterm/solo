@@ -40,9 +40,6 @@ class ScreenOutput implements OutputInterface
             $messages = implode('', $messages);
         }
 
-        // append the output to debug.txt
-        file_put_contents('debug.txt', $messages, FILE_APPEND);
-
         $this->screen->writeln($messages);
     }
 
