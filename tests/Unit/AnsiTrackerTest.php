@@ -122,7 +122,7 @@ class AnsiTrackerTest extends Base
     public function clear_test(): void
     {
         $ansi = new AnsiBuffer;
-        $ansi->buffer->buffer = [
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -130,14 +130,14 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(
+        $ansi->clear(
             startRow: 1,
             startCol: 3,
             endRow: 3,
             endCol: 2
         );
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -152,7 +152,7 @@ class AnsiTrackerTest extends Base
     public function clear_beyond_cols_test(): void
     {
         $ansi = new AnsiBuffer;
-        $ansi->buffer->buffer = [
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -160,9 +160,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 1, startCol: -3, endRow: 3, endCol: 50);
+        $ansi->clear(startRow: 1, startCol: -3, endRow: 3, endCol: 50);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -177,7 +177,7 @@ class AnsiTrackerTest extends Base
     public function clear_beyond_rows_test(): void
     {
         $ansi = new AnsiBuffer;
-        $ansi->buffer->buffer = [
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -185,9 +185,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 10, startCol: 1, endRow: 13, endCol: 10);
+        $ansi->clear(startRow: 10, startCol: 1, endRow: 13, endCol: 10);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -202,7 +202,7 @@ class AnsiTrackerTest extends Base
     public function same_line_clear(): void
     {
         $ansi = new AnsiBuffer;
-        $ansi->buffer->buffer = [
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -210,9 +210,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 1, startCol: 1, endRow: 1, endCol: 2);
+        $ansi->clear(startRow: 1, startCol: 1, endRow: 1, endCol: 2);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',

@@ -15,6 +15,7 @@ use Exception;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\SkippedWithMessageException;
 use ReflectionClass;
 use SoloTerm\Solo\Support\Screen;
 
@@ -48,28 +49,38 @@ trait ComparesVisually
 
         $this->uniqueTestIdentifier = $this->uniqueTestIdentifier();
 
-        if (getenv('ENABLE_SCREENSHOT_TESTING') === false) {
+        $shouldRunVisualTest = getenv('ENABLE_SCREENSHOT_TESTING') === '1'
+            || getenv('ENABLE_SCREENSHOT_TESTING') === '2' && $this->getFixture($content) === false;
+
+        if ($shouldRunVisualTest) {
+            $this->withOutputEnabled(fn() => $this->assertVisualMatch($content));
+        } else {
             $this->assertFixtureMatch($content);
-
-            return;
         }
-
-        $this->withOutputEnabled(function () use ($content) {
-            $this->assertVisualMatch($content);
-        });
     }
 
-    protected function assertFixtureMatch(array $content)
+    protected function getFixture(array $content)
     {
         if (!file_exists($this->fixturePath())) {
-            $this->markTestSkipped('Fixture does not exist for ' . $this->uniqueTestIdentifier[1]);
+            return false;
         }
 
         $fixture = file_get_contents($this->fixturePath());
         $fixture = json_decode($fixture, true);
 
         if ($fixture['checksum'] !== md5(json_encode($content))) {
-            $this->markTestSkipped('Fixture out of date for ' . $this->uniqueTestIdentifier[1]);
+            return false;
+        }
+
+        return $fixture;
+    }
+
+    protected function assertFixtureMatch(array $content): bool
+    {
+        $fixture = $this->getFixture($content);
+
+        if (!$fixture) {
+            $this->markTestSkipped('Fixture does not exist for ' . $this->uniqueTestIdentifier[1]);
         }
 
         $screen = new Screen($fixture['width'], $fixture['height']);
@@ -79,6 +90,8 @@ trait ComparesVisually
         }
 
         $this->assertEquals($fixture['output'], $screen->output());
+
+        return true;
     }
 
     protected function assertVisualMatch(array $content, $attempt = 1)
