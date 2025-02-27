@@ -9,16 +9,15 @@
 
 namespace SoloTerm\Solo\Tests\Unit;
 
-use Illuminate\Support\Benchmark;
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Support\AnsiTracker;
+use SoloTerm\Solo\Buffers\AnsiBuffer;
 
 class AnsiTrackerTest extends Base
 {
     #[Test]
     public function add_foreground_colors(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // Black
         $ansi->addAnsiCode(30);
@@ -34,7 +33,7 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function default_foreground(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // FG
         $ansi->addAnsiCode(30);
@@ -49,7 +48,7 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function default_background(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // FG
         $ansi->addAnsiCode(30);
@@ -64,7 +63,7 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function reset_decorations(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // Bold
         $ansi->addAnsiCode(1);
@@ -88,7 +87,7 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function reset_bold_and_dim(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // Bold
         $ansi->addAnsiCode(1);
@@ -103,7 +102,7 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function reset_all(): void
     {
-        $ansi = new AnsiTracker;
+        $ansi = new AnsiBuffer;
 
         // Black fg
         $ansi->addAnsiCode(30);
@@ -122,8 +121,8 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function clear_test(): void
     {
-        $ansi = new AnsiTracker;
-        $ansi->buffer->buffer = [
+        $ansi = new AnsiBuffer;
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -131,14 +130,14 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(
+        $ansi->clear(
             startRow: 1,
             startCol: 3,
             endRow: 3,
             endCol: 2
         );
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -152,8 +151,8 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function clear_beyond_cols_test(): void
     {
-        $ansi = new AnsiTracker;
-        $ansi->buffer->buffer = [
+        $ansi = new AnsiBuffer;
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -161,9 +160,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 1, startCol: -3, endRow: 3, endCol: 50);
+        $ansi->clear(startRow: 1, startCol: -3, endRow: 3, endCol: 50);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -177,8 +176,8 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function clear_beyond_rows_test(): void
     {
-        $ansi = new AnsiTracker;
-        $ansi->buffer->buffer = [
+        $ansi = new AnsiBuffer;
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -186,9 +185,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 10, startCol: 1, endRow: 13, endCol: 10);
+        $ansi->clear(startRow: 10, startCol: 1, endRow: 13, endCol: 10);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',
@@ -202,8 +201,8 @@ class AnsiTrackerTest extends Base
     #[Test]
     public function same_line_clear(): void
     {
-        $ansi = new AnsiTracker;
-        $ansi->buffer->buffer = [
+        $ansi = new AnsiBuffer;
+        $ansi->buffer = [
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1],
@@ -211,9 +210,9 @@ class AnsiTrackerTest extends Base
             [1, 1, 1, 1, 1],
         ];
 
-        $ansi->buffer->clear(startRow: 1, startCol: 1, endRow: 1, endCol: 2);
+        $ansi->clear(startRow: 1, startCol: 1, endRow: 1, endCol: 2);
 
-        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer->buffer);
+        $buffer = array_map(fn($line) => implode(',', $line), $ansi->buffer);
 
         $this->assertSame([
             '1,1,1,1,1',

@@ -13,9 +13,49 @@ use PHPUnit\Framework\Attributes\Test;
 use SoloTerm\Solo\Support\Screen;
 use SoloTerm\Solo\Tests\Support\ComparesVisually;
 
+use function Orchestra\Testbench\package_path;
+
 class ScreenTest extends Base
 {
     use ComparesVisually;
+
+    #[Test]
+    public function character_buffer_test()
+    {
+        //  mb_strwidth => 2
+        //  mb_strlen => 1
+        //  grapheme_strlen => 1
+        //  strlen => 4
+        //        $emoji = '🙂';
+
+        //  mb_strwidth => 2
+        //  mb_strlen => 2
+        //  grapheme_strlen => 1
+        //  strlen => 6
+        //        $emoji = '❤️';
+
+        //  mb_strwidth => 3
+        //  mb_strlen => 2
+        //  grapheme_strlen => 1
+        //  strlen => 7
+        //        $emoji = '🐛️';
+
+        //        dd([
+        //            'e' => $emoji,
+        //            'mb_strwidth' => mb_strwidth($emoji, 'UTF-8'),
+        //            'mb_strlen' => mb_strlen($emoji, 'UTF-8'),
+        //            'grapheme_strlen' => grapheme_strlen($emoji),
+        //            'strlen' => strlen($emoji),
+        //        ]);
+
+        $this->assertTerminalMatch([
+            '❤️',
+            'Hello World',
+            "\e[3C",
+            'asdf',
+            '🐛️' . '234',
+        ], iterate: true);
+    }
 
     #[Test]
     public function clear_screen_test()
@@ -82,6 +122,7 @@ class ScreenTest extends Base
         ]);
     }
 
+    #[Test]
     public function test_cursor_backward(): void
     {
         $this->assertTerminalMatch([
@@ -182,7 +223,7 @@ class ScreenTest extends Base
     #[Test]
     public function test_erase_in_line_2(): void
     {
-        $this->assertTerminalMatch("hello world\e[4G\e[2K");
+        $this->assertTerminalMatch("hello world\e[4G\e[2Ka");
     }
 
     #[Test]
@@ -235,7 +276,7 @@ class ScreenTest extends Base
             'abcd',
             'efgh',
             'ijkl',
-            "\e[2A\e[2C\e[2J"
+            "\e[2A\e[2C\e[2Ja"
         ]);
     }
 
@@ -473,7 +514,7 @@ class ScreenTest extends Base
     {
         $this->assertTerminalMatch([
             ...range(1, 100),
-            "101\e[1000A\e7\e[1000B\e8aaa",
+            '101' . "\e[1000A" . "\e7" . "\e[1000B" . "\e8" . 'aaa',
         ]);
     }
 
@@ -574,14 +615,7 @@ class ScreenTest extends Base
 \e[32mInfo!\e[39m
 TXT;
 
-        $expected = <<<TXT
-\e[32mInfo!
-\e[32mInfo!
-TXT;
-
-        $actual = $this->makeIdenticalScreen()->write($content)->output();
-
-        $this->assertEquals($expected, $actual);
+        $this->assertTerminalMatch($content);
 
     }
 
@@ -626,8 +660,299 @@ TXT;
     #[Test]
     public function the_daniel_weaver_test_bless_you_daniel()
     {
-        $line = str_repeat('a', 128);
+        $width = $this->makeIdenticalScreen()->width;
+        $line = str_repeat('a', $width);
 
         $this->assertTerminalMatch($line . '0');
+
+    }
+
+    #[Test]
+    public function cursor_home_both()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[19;8Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_col_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[;8Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_row_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[19;Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_semicolon_only()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[;Hhey there");
+    }
+
+    #[Test]
+    public function cursor_home_no_params()
+    {
+        $this->assertTerminalMatch("\e[H\e[2J-----------\e[Hhey there");
+    }
+
+    #[Test]
+    public function newline_regression_1()
+    {
+        $height = $this->makeIdenticalScreen()->height;
+        $this->assertTerminalMatch(range(1, $height));
+    }
+
+    #[Test]
+    public function newline_regression_2()
+    {
+        $height = $this->makeIdenticalScreen()->height;
+        $this->assertTerminalMatch([...range(1, $height - 1), PHP_EOL]);
+    }
+
+    #[Test]
+    public function enhanced_log_1()
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $lines = [];
+        for ($i = 1; $i < $height + 10; $i++) {
+            $ansi = min($i + 1, $height + 1);
+            $lines[] = "tot: $height. line $i. ANSI $ansi \e[$ansi;1H";
+        }
+
+        $this->assertTerminalMatch($lines);
+    }
+
+    #[Test]
+    public function enhanced_log_2()
+    {
+        $this->assertTerminalMatch(file_get_contents(package_path('tests/Fixtures/enhance-log-wrap-vendor-test-3.log')));
+    }
+
+    #[Test]
+    public function test_cursor_save_restore_with_styling(): void
+    {
+        $this->assertTerminalMatch("\e[32mColored\e7 text\e[0m continues\e8\e[31mOverwrite");
+    }
+
+    #[Test]
+    public function test_reverse_index(): void
+    {
+        $this->assertTerminalMatch([
+            'First line',
+            'Second line',
+            "\e[AMoved up"
+        ]);
+    }
+
+    #[Test]
+    public function test_multiple_color_attributes(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[1;4;31;43mBold underlined red on yellow\e[0m Normal"
+        ]);
+    }
+
+    #[Test]
+    public function test_partial_screen_clear(): void
+    {
+        $this->assertTerminalMatch([
+            "Line 1\nLine 2\nLine 3",
+            "\e[2;2H\e[1J\e[0K",  // Clear from start to cursor and rest of line
+            'New content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_tab_handling_1(): void
+    {
+        $this->assertTerminalMatch([
+            "Start\tTabbed\tText",
+            "\e[1G\e[1I",
+            'x'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_tab_handling_2(): void
+    {
+        $this->assertTerminalMatch([
+            "Start\tTabbed\tText",
+            "\e[1G\e[I",
+            'x'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_tab_handling_3(): void
+    {
+        $this->assertTerminalMatch([
+            "Start\tTabbed\tText",
+            "\e[1G\e[2I",
+            'x'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_complex_cursor_movement(): void
+    {
+        $this->assertTerminalMatch([
+            'Start Text',
+            "\e[5G\e[1C\e[1D\e[2C\e[3D*"  // Various cursor movements
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_alternate_character_set(): void
+    {
+        $this->markTestSkipped('Not yet implemented');
+
+        $this->assertTerminalMatch([
+            "\e(0lqqk\e(B",  // Switch to line drawing and back
+            'Normal text'
+        ]);
+    }
+
+    #[Test]
+    public function xxx_test_background_color_preservation(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[43mYellow BG\e[5G\e[K\e[1G",  // Should preserve yellow background
+            'New text'
+        ]);
+    }
+
+    #[Test]
+    public function xxx_test_background_color_preservation2(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[43mColored\e[1;4mStyled\e[0KNew content",
+        ]);
+    }
+
+    #[Test]
+    public function xxx_test_selective_erase(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[31mColored\e[1;4mStyled\e[0K",  // Erase to end of line preserving style
+            'New content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_color_reset_handling(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[31;1mRed Bold\e[39mDefault Color Still Bold\e[0m",
+            'Normal Text'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_insert_lines_1(): void
+    {
+        $this->assertTerminalMatch([
+            "Line 1\nLine 2\nLine 3",
+            "\e[2L",  // Insert 2 lines at current position
+            'New Content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_insert_lines_2(): void
+    {
+        $this->assertTerminalMatch([
+            implode(PHP_EOL, range(0, 100)),
+            "\e[2L",  // Insert 2 lines at current position
+            'New Content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_insert_lines_3(): void
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $this->assertTerminalMatch([
+            implode(PHP_EOL, range(0, $height - 5)),
+            "\e[20L",
+            'New Content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_insert_lines_4(): void
+    {
+        $this->assertTerminalMatch([
+            "Line 1\nLine 2\nLine 3",
+            "\e[L",
+            'New Content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_insert_lines_5(): void
+    {
+        $this->assertTerminalMatch([
+            implode(PHP_EOL, range(0, 100)),
+            "\e[H\e[2B",
+            "\e[20L",
+            'New Content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function test_combining_characters(): void
+    {
+        $this->assertTerminalMatch([
+            "e\u{0301}",  // e with acute accent
+            "\e[1G*"  // Should treat combining characters as single unit
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function backspace_char(): void
+    {
+        $this->assertTerminalMatch("abcde\x08fg");
+        $this->assertTerminalMatch("abcde\x08");
+        $this->assertTerminalMatch("\x08abcde");
+    }
+
+    #[Test]
+    public function delete_char(): void
+    {
+        $this->assertTerminalMatch("a\x7fb\x7fc");
+        $this->assertTerminalMatch("abcde\x7ffg");
+        $this->assertTerminalMatch("abcde\x7f");
+        $this->assertTerminalMatch("\x7fabcde");
+    }
+
+    #[Test]
+    public function start_stop_test(): void
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $this->assertTerminalMatch([
+            implode(PHP_EOL, range(0, $height)),
+            "\e[1000E" . str_repeat(PHP_EOL, $height - 1) . "\e[H",
+            'new content'
+        ], iterate: true);
+    }
+
+    #[Test]
+    public function start_stop_test2()
+    {
+        $height = $this->makeIdenticalScreen()->height;
+
+        $this->assertTerminalMatch([
+            '123[1000E@',
+            ...range(1, $height - 3),
+            '[HLine 1[H',
+            'Line 2[2;1H',
+            'Line 3[3;1H',
+            'd',
+        ]);
     }
 }

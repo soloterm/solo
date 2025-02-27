@@ -19,7 +19,6 @@ class AnsiMatcher
 
         return array_map(function ($part) {
             return str_starts_with($part, "\e") ? new AnsiMatch($part) : $part;
-
         }, $parts);
     }
 

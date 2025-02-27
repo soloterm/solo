@@ -18,12 +18,17 @@ use ReflectionClass;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
+use SoloTerm\Solo\Support\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
 
 trait ManagesProcess
 {
     public ?InvokedProcess $process = null;
+
+    public $outputStartMarker = '[[==SOLO_START==]]';
+
+    public $outputEndMarker = '[[==SOLO_END==]]';
 
     protected array $afterTerminateCallbacks = [];
 
@@ -47,6 +52,10 @@ trait ManagesProcess
 
         $command = explode(' ', $this->command);
 
+        // Resources about screen version needing to be 5.0.0
+        // @TODO add a check on startup to see what version `screen` they are using
+        // https://chatgpt.com/share/67b7b74e-3db8-8011-9e2b-79deb71eb12d
+
         // ??
         // alias screen='TERM=xterm-256color screen'
         // https://superuser.com/questions/800126/gnu-screen-changes-vim-syntax-highlighting-colors
@@ -56,12 +65,7 @@ trait ManagesProcess
 
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            // ->command($command)
-            ->command([
-                'bash',
-                '-c',
-                "stty cols {$screen->width} rows {$screen->height} && screen -m -q {$this->command}",
-            ])
+            ->command($this->buildCommandArray($screen))
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)
@@ -83,11 +87,74 @@ trait ManagesProcess
         return $process->env([
             'TERM' => 'xterm-256color',
             'FORCE_COLOR' => '1',
-            'COLUMNS' => $this->scrollPaneWidth(),
-            'LINES' => $this->scrollPaneHeight(),
+            'COLUMNS' => $screen->width,
+            'LINES' => $screen->height,
             ...$this->environment,
             ...$process->environment
         ]);
+    }
+
+    protected function buildCommandArray(Screen $screen): array
+    {
+        $local = $this->localeEnvironmentVariables();
+        $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
+
+        // If there's already content in the screen then we have to do a bit of trickery. `screen` relies
+        // on absolute move codes like \e[3;1H. If we don't echo these newlines in, then the absolute
+        // moves will be wrong. We echo as many newlines as are currently present in the screen.
+
+        // We echo those *before* the outputStartMarker, so they never make it back into our Screen
+        // instance, which is correct. We also add a single line to the screen itself to make
+        // sure we're clear of the existing content.
+        if ($lines = count($this->screen->printable->buffer)) {
+            $newlines = str_repeat("\n", $lines);
+            $this->screen->write("\n");
+        } else {
+            $newlines = '';
+        }
+
+        // We have to add a 250ms delay because some commands can print so much
+        // output that screen will terminate before PHP can grab it all.
+        // 250ms seems to work, although it's totally arbitrary.
+        $inner = sprintf("printf '%%s' %s; %s; sleep 0.25; printf '%%s' %s",
+            // `screen` spams output with a bunch of ANSI codes that we want to ignore.
+            escapeshellarg($newlines . $this->outputStartMarker),
+            $this->command,
+            // `screen` prints "[screen is terminating]" along with more ANSI codes.
+            $this->outputEndMarker
+        );
+
+        $built = implode(' && ', [
+            $local,
+            $size,
+            'screen -U -q sh -c ' . escapeshellarg($inner)
+        ]);
+
+        return ['bash', '-c', $built];
+    }
+
+    protected function localeEnvironmentVariables()
+    {
+        $locale = $this->utf8Locale();
+
+        return "export LC_ALL={$locale}; export LANG={$locale}";
+    }
+
+    protected function utf8Locale()
+    {
+        $locale = function_exists('locale_get_default')
+            ? locale_get_default()
+            : (getenv('LC_ALL') ?: (getenv('LC_CTYPE') ?: getenv('LANG')));
+
+        if (!$locale) {
+            return 'en_US.UTF-8';
+        }
+
+        if (stripos($locale, 'UTF-8') !== false) {
+            return $locale;
+        }
+
+        return explode('.', $locale, 2)[0] . '.UTF-8';
     }
 
     protected function setWorkingDirectory(): void
@@ -158,8 +225,6 @@ trait ManagesProcess
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
             $this->partialBuffer .= $buffer;
         });
-
-        //         $this->sendSizeViaStty();
     }
 
     public function whenStopping()
@@ -356,7 +421,7 @@ trait ManagesProcess
             // @link https://github.com/aarondfrancis/solo/issues/33
             $this->clearStdOut();
             $this->clearStdErr();
-        } elseif ($after > 10240) {
+        } elseif ($after > 10_240) {
             if (Str::contains($this->partialBuffer, "\n")) {
                 // We're over the limit, so look for a safe spot to cut, starting with newlines.
                 $write = Str::beforeLast($this->partialBuffer, "\n");
@@ -365,42 +430,24 @@ trait ManagesProcess
                 $write = Str::beforeLast($this->partialBuffer, "\e");
             } else {
                 // Otherwise, we'll just slice anywhere that's safe.
-                $write = $this->sliceAtUTF8Boundary($this->partialBuffer);
+                $write = $this->sliceBeforeLogicalCharacterBoundary($this->partialBuffer);
             }
         } else {
             return;
         }
 
         $this->partialBuffer = substr($this->partialBuffer, strlen($write));
+
         $this->addOutput($write);
     }
 
-    public function sliceAtUTF8Boundary(string $input): string
+    public function sliceBeforeLogicalCharacterBoundary(string $input): string
     {
-        $len = strlen($input);
+        // The pattern \X is a PCRE escape that matches an extended
+        // grapheme cluster—that is, a complete visual unit.
+        preg_match_all("/\X/u", $input, $matches);
 
-        // Walk backward from the end, to find a safe UTF-8 start
-        $i = $len - 1;
-        while ($i >= 0) {
-            $byteVal = ord($input[$i]);
-
-            // If this is a leading byte or ASCII, we're good
-            // Leading bytes match:
-            //   0xxxxxxx (ASCII)
-            //   110xxxxx (2-byte start)
-            //   1110xxxx (3-byte start)
-            //   11110xxx (4-byte start)
-            // etc.
-            if (($byteVal & 0b11000000) != 0b10000000) {
-                // This is not a continuation byte (i.e. 10xxxxxx),
-                // so it's a valid UTF-8 start boundary
-                break;
-            }
-
-            $i--;
-        }
-
-        // Now $i is either -1 (we fell off the start) or at the start of a codepoint
-        return substr($input, 0, $i + 1);
+        // Return everything before the last grapheme cluster.
+        return implode('', array_splice($matches[0], 0, -1));
     }
 }
