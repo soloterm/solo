@@ -15,7 +15,6 @@ use Exception;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\SkippedWithMessageException;
 use ReflectionClass;
 use SoloTerm\Solo\Support\Screen;
 
