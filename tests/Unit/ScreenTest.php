@@ -928,5 +928,4 @@ TXT;
         $this->assertTerminalMatch("abcde\x7f");
         $this->assertTerminalMatch("\x7fabcde");
     }
-
 }
