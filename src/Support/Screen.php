@@ -95,7 +95,7 @@ class Screen
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
 
-        foreach($parts as $part) {
+        foreach ($parts as $part) {
             if ($part instanceof AnsiMatch) {
                 if ($part->command) {
                     $this->handleAnsiCode($part);
