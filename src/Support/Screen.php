@@ -94,11 +94,8 @@ class Screen
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
-        $partsCount = count($parts);
 
-        for ($i = 0; $i < $partsCount; $i++) {
-            $part = $parts[$i];
-
+        foreach($parts as $part) {
             if ($part instanceof AnsiMatch) {
                 if ($part->command) {
                     $this->handleAnsiCode($part);
