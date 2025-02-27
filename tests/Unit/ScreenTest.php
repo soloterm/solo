@@ -937,7 +937,7 @@ TXT;
         $this->assertTerminalMatch([
             implode(PHP_EOL, range(0, $height)),
             "\e[1000E" . str_repeat(PHP_EOL, $height - 1) . "\e[H",
-            "new content"
+            'new content'
         ], iterate: true);
     }
 
@@ -948,12 +948,11 @@ TXT;
 
         $this->assertTerminalMatch([
             '123[1000E@',
-            ...range(1, $height-3),
+            ...range(1, $height - 3),
             '[HLine 1[H',
             'Line 2[2;1H',
             'Line 3[3;1H',
             'd',
         ]);
     }
-
 }
