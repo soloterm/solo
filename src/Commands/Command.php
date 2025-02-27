@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * @author Aaron Francis <aaron@tryhardstudios.com>
  *
