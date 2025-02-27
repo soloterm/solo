@@ -112,7 +112,6 @@ class Screen
             $this->alert();
         }
 
-
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
