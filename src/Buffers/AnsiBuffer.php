@@ -150,6 +150,24 @@ class AnsiBuffer extends Buffer
         return $this->ansiStringFromBits($this->active);
     }
 
+    public function getActiveBackground(): array|int
+    {
+        // If we have an extended background (256-color or RGB), that counts as "active"
+        if ($this->extendedBackground !== null) {
+            return $this->extendedBackground;
+        }
+
+        // Build a bitmask that represents all possible background codes.
+        // Then see if any of those bits are set in $this->active.
+        $backgroundBitmask = 0;
+        foreach ($this->background as $code) {
+            $backgroundBitmask |= $this->codes[$code];
+        }
+
+        // If any background bits are set, this expression will be non-zero.
+        return $this->active & $backgroundBitmask;
+    }
+
     public function compressedAnsiBuffer(): array
     {
         $lines = $this->buffer;

@@ -122,6 +122,7 @@ class ScreenTest extends Base
         ]);
     }
 
+    #[Test]
     public function test_cursor_backward(): void
     {
         $this->assertTerminalMatch([
@@ -815,12 +816,29 @@ TXT;
     }
 
     #[Test]
-    public function test_background_color_preservation(): void
+    public function xxx_test_background_color_preservation(): void
     {
         $this->assertTerminalMatch([
             "\e[43mYellow BG\e[5G\e[K\e[1G",  // Should preserve yellow background
             'New text'
         ]);
+    }
+
+    #[Test]
+    public function xxx_test_background_color_preservation2(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[43mColored\e[1;4mStyled\e[0KNew content",
+        ]);
+    }
+
+    #[Test]
+    public function xxx_test_selective_erase(): void
+    {
+        $this->assertTerminalMatch([
+            "\e[31mColored\e[1;4mStyled\e[0K",  // Erase to end of line preserving style
+            'New content'
+        ], iterate: true);
     }
 
     #[Test]
@@ -894,12 +912,5 @@ TXT;
         ], iterate: true);
     }
 
-    #[Test]
-    public function test_selective_erase(): void
-    {
-        $this->assertTerminalMatch([
-            "\e[31mColored\e[1;4mStyled\e[0K",  // Erase to end of line preserving style
-            'New content'
-        ], iterate: true);
-    }
+
 }

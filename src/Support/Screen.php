@@ -403,21 +403,12 @@ class Screen
     protected function handleEraseDisplay(int $param): void
     {
         if ($param === 0) {
-            $this->printable->clear(
-                startRow: $this->cursorRow,
-                startCol: $this->cursorCol
-            );
             // \e[0J - Erase from cursor until end of screen
             $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol
             );
         } elseif ($param === 1) {
-            $this->printable->clear(
-                startRow: $this->linesOffScreen,
-                endRow: $this->cursorRow,
-                endCol: $this->cursorCol
-            );
             // \e[1J - Erase from cursor until beginning of screen
             $this->buffers->clear(
                 startRow: $this->linesOffScreen,
@@ -425,11 +416,6 @@ class Screen
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
-            $this->printable->clear(
-                startRow: $this->linesOffScreen,
-                endRow: $this->linesOffScreen + $this->height,
-            );
-
             // \e[2J - Erase entire screen
             $this->buffers->clear(
                 startRow: $this->linesOffScreen,
@@ -498,26 +484,20 @@ class Screen
     {
         if ($param === 0) {
             // \e[0K - Erase from cursor to end of line
-            $this->printable->clear(
-                startRow: $this->cursorRow,
-                startCol: $this->cursorCol,
-                endRow: $this->cursorRow
-            );
-
             $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol,
                 endRow: $this->cursorRow
             );
 
+            $background = $this->ansi->getActiveBackground();
+
+            if ($background !== 0) {
+                $this->printable->fill(' ', $this->cursorRow, $this->cursorCol, $this->width - 1);
+                $this->ansi->fill($background, $this->cursorRow, $this->cursorCol, $this->width - 1);
+            }
         } elseif ($param == 1) {
             // \e[1K - Erase start of line to the cursor
-            $this->printable->clear(
-                startRow: $this->cursorRow,
-                endRow: $this->cursorRow,
-                endCol: $this->cursorCol
-            );
-
             $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow,
@@ -525,11 +505,6 @@ class Screen
             );
         } elseif ($param === 2) {
             // \e[2K - Erase the entire line
-            $this->printable->clear(
-                startRow: $this->cursorRow,
-                endRow: $this->cursorRow
-            );
-
             $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow

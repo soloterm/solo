@@ -149,7 +149,7 @@ trait ComparesVisually
                 continue;
             }
 
-            if (!$frame['class']) {
+            if (!isset($frame['class'])) {
                 continue;
             }
 
@@ -227,10 +227,11 @@ trait ComparesVisually
     {
         $this->ensureDirectoriesExist($filename);
 
+        $this->restoreTerminal();
+
         echo "\e[0m"; // Reset styles
         echo "\e[H"; // Move cursor home
         echo "\e[2J"; // Clear screen
-        // echo "\e[1 q"; // Block cursor
         echo "\e[?25l"; // Hide cursor
 
         foreach ($content as $c) {
@@ -254,16 +255,19 @@ trait ComparesVisually
         }
 
         // Run screencapture
-        exec('screencapture -l ' . escapeshellarg($iterm) . ' -o -x ' . escapeshellarg($filename), $output, $result);
+        retry(times: 3, callback: function () use ($iterm, $filename) {
+            exec('screencapture -l ' . escapeshellarg($iterm) . ' -o -x ' . escapeshellarg($filename), $output,
+                $result);
+
+            if ($result !== 0) {
+                throw new Exception("Screencapture failed!\n" . implode(PHP_EOL, $output));
+            }
+        });
 
         // Crop off the top bar, as it causes false positives
         exec(sprintf('convert %s -gravity North -chop 0x60 %s', escapeshellarg($filename), escapeshellarg($filename)));
 
         $this->restoreTerminal();
-
-        if ($result !== 0) {
-            throw new Exception("Screencapture failed!\n" . implode(PHP_EOL, $output));
-        }
     }
 
     /**

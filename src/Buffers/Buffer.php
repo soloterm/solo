@@ -63,7 +63,7 @@ class Buffer implements ArrayAccess
                 // Chop off the end of the array.
                 $this->buffer[$row] = array_slice($line, 0, $cols[0]);
             } else {
-                // Clearing the middle of a row. Fill with either 0s or spaces.
+                // Clearing the middle of a row. Fill with the replacement value.
                 $this->fill($this->valueForClearing, $row, $cols[0], $cols[1]);
             }
         }
