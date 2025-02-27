@@ -99,6 +99,20 @@ class Screen
             subject: $content
         );
 
+        // we need to handle the alert characters at the screen level
+        // so they don't get parsed as ANSI codes, or added to the printable buffer
+        // printed alter sounds, would then play on each line/key press
+        if (str_contains($content, "\x07") || str_contains($content, '')) {
+            $content = str_replace(
+                search: ["\x07", ''],
+                replace: '',
+                subject: $content
+            );
+
+            $this->alert();
+        }
+
+
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
@@ -133,6 +147,17 @@ class Screen
         }
 
         return $this;
+    }
+
+    public function alert(): void
+    {
+        // Write the bell character (ASCII 7) directly to the output.
+        // This produces the alert tone (beep)
+        // without modifying the printable or ANSI buffers.
+        fwrite(STDOUT, "\x07");
+
+        // Flush the output buffer to ensure the alert tone is played immediately.
+        fflush(STDOUT);
     }
 
     public function writeln(string $content): void
