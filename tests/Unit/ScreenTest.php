@@ -911,6 +911,4 @@ TXT;
             "\e[1G*"  // Should treat combining characters as single unit
         ], iterate: true);
     }
-
-
 }

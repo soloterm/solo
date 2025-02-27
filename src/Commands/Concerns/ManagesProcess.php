@@ -18,12 +18,17 @@ use ReflectionClass;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
+use SoloTerm\Solo\Support\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
 
 trait ManagesProcess
 {
     public ?InvokedProcess $process = null;
+
+    public $outputStartMarker = '[[==SOLO_START==]]';
+
+    public $outputEndMarker = '[[==SOLO_END==]]';
 
     protected array $afterTerminateCallbacks = [];
 
@@ -58,16 +63,9 @@ trait ManagesProcess
 
         $screen = $this->makeNewScreen();
 
-        // Build the command by adding a few necessary arguments.
-        $built = implode(' && ', [
-            $this->localEnvironmentVariables(),
-            "stty cols {$screen->width} rows {$screen->height}",
-            "screen -U -q {$this->command}"
-        ]);
-
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            ->command(['bash', '-c', $built])
+            ->command($this->buildCommandArray($screen))
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)
@@ -96,7 +94,28 @@ trait ManagesProcess
         ]);
     }
 
-    protected function localEnvironmentVariables()
+    protected function buildCommandArray(Screen $screen): array
+    {
+        $local = $this->localeEnvironmentVariables();
+        $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
+
+        $inner = sprintf(
+            "printf '%%s' %s; %s; printf '%%s' %s",
+            $this->outputStartMarker,
+            $this->command,
+            $this->outputEndMarker
+        );
+
+        $built = implode(' && ', [
+            $local,
+            $size,
+            'screen -U -q sh -c ' . escapeshellarg($inner)
+        ]);
+
+        return ['bash', '-c', $built];
+    }
+
+    protected function localeEnvironmentVariables()
     {
         $locale = $this->utf8Locale();
 
