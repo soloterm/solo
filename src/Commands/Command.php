@@ -9,6 +9,7 @@
 
 namespace SoloTerm\Solo\Commands;
 
+use Carbon\Carbon;
 use Chewie\Concerns\Ticks;
 use Chewie\Contracts\Loopable;
 use Illuminate\Support\Collection;
@@ -49,6 +50,8 @@ class Command implements Loopable
     public ?KeyPressListener $keyPressListener = null;
 
     protected ?string $workingDirectory = null;
+    
+    public ?Carbon $lastOutput = null;
 
     public static function from(string $command): static
     {
@@ -177,6 +180,7 @@ class Command implements Loopable
         $text = str_replace('[screen is terminating]', '', $text);
 
         $this->screen->write($text);
+        $this->lastOutput = now();
     }
 
     public function addLine($line)
@@ -306,6 +310,8 @@ class Command implements Loopable
             width: $this->scrollPaneWidth(),
             height: $this->scrollPaneHeight()
         );
+        
+        $this->lastOutput = now();
 
         return $screen->respondToQueriesVia(function ($output) {
             $this->input->write($output);
