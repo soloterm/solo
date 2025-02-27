@@ -911,4 +911,22 @@ TXT;
             "\e[1G*"  // Should treat combining characters as single unit
         ], iterate: true);
     }
+
+    #[Test]
+    public function backspace_char(): void
+    {
+        $this->assertTerminalMatch("abcde\x08fg");
+        $this->assertTerminalMatch("abcde\x08");
+        $this->assertTerminalMatch("\x08abcde");
+    }
+
+    #[Test]
+    public function delete_char(): void
+    {
+        $this->assertTerminalMatch("a\x7fb\x7fc");
+        $this->assertTerminalMatch("abcde\x7ffg");
+        $this->assertTerminalMatch("abcde\x7f");
+        $this->assertTerminalMatch("\x7fabcde");
+    }
+
 }

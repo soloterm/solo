@@ -23,6 +23,10 @@ class NamespacedCommandTest extends Base
             function ($ansi, $plain) {
                 $this->assertStringContainsString('List', $plain);
                 $this->assertStringContainsString('solo.php', $plain);
+
+                // We've had some issues where there are newlines above the output,
+                // so this ensures that we dont have that regression.
+                $this->assertStringContainsString('solo.php', explode("\n", $plain)[3]);
             },
             Key::LEFT,
             fn($plain) => $this->assertStringContainsString('Vue3', $plain),

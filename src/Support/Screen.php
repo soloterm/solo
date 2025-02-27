@@ -88,8 +88,14 @@ class Screen
 
     public function write(string $content): static
     {
+        // Backspace character gets replaced with "move one column backwards."
         // Carriage returns get replaced with a code to move to column 0.
-        $content = str_replace("\r", "\e[G", $content);
+
+        $content = str_replace(
+            search: ["\x08", "\r"],
+            replace: ["\e[D", "\e[G"],
+            subject: $content
+        );
 
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
