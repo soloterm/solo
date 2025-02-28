@@ -357,7 +357,6 @@ class Dashboard extends Prompt
             }
 
             $this->currentCommand()->sendInput($key);
-        }
 
             return;
         }
