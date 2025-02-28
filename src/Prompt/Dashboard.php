@@ -327,8 +327,8 @@ class Dashboard extends Prompt
                     $cursorPosition = min($currentLineLength, $cursorPosition + $amount);
                     break;
 
-                // NOTE: We need to correctly handle these cases, because currently if there is no more input left to
-                //  scroll through the process gets angry.
+                    // NOTE: We need to correctly handle these cases, because currently if there is no more input left to
+                    //  scroll through the process gets angry.
                 case 'A': // Up arrow / Mouse up
                     $amount = $params ?: 1;
                     // Adjust `cursorPosition` with an assumed line length for multiline input
@@ -366,7 +366,7 @@ class Dashboard extends Prompt
             }
             $cursorPosition--;
             $currentLineLength--;
-        } else if ($key === "\r" || $key === Key::ENTER) {
+        } elseif ($key === "\r" || $key === Key::ENTER) {
             // Reset input tracking
             $currentLineLength = 0;
             $cursorPosition = 0;
