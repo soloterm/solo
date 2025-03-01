@@ -90,8 +90,7 @@ class Screen
 
     public function write(string $content): static
     {
-        // Convert raw backspace (BS or DEL) into an ANSI “cursor backward”
-        // so that your existing handleAnsiCode('\e[D') picks it up.
+        // Convert raw backspace into an ANSI “cursor backward”
         // Also convert carriage returns to cursor-col=0:
         $content = str_replace(
             search: ["\x08", "\x7f", "\r"],
@@ -99,9 +98,9 @@ class Screen
             subject: $content
         );
 
-        // we need to handle the alert characters at the screen level
-        // so they don't get parsed as ANSI codes, or added to the printable buffer
-        // printed alter sounds, would then play on each line/key press
+        // Handle alert characters (bell) by removing them from the content
+        // whilst also triggering the alert tone once, to prevent it from
+        // being buffered and looped on each subsequent write.
         if (str_contains($content, "\x07") || str_contains($content, '')) {
             $content = str_replace(
                 search: ["\x07", ''],
@@ -150,7 +149,7 @@ class Screen
 
     public function alert(): void
     {
-        // Write the bell character (ASCII 7) directly to the output.
+        // Write the bell character directly to the output.
         // This produces the alert tone (beep)
         // without modifying the printable or ANSI buffers.
         fwrite(STDOUT, "\x07");
