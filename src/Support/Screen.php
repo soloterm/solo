@@ -90,8 +90,26 @@ class Screen
 
     public function write(string $content): static
     {
-        // Carriage returns get replaced with a code to move to column 0.
-        $content = str_replace("\r", "\e[G", $content);
+        // Convert raw backspace into an ANSI “cursor backward”
+        // Also convert carriage returns to cursor-col=0:
+        $content = str_replace(
+            search: ["\x08", "\r"],
+            replace: ["\e[D", "\e[G"],
+            subject: $content
+        );
+
+        // Handle alert characters (bell) by removing them from the content
+        // whilst also triggering the alert tone once, to prevent it from
+        // being buffered and looped on each subsequent write.
+        if (str_contains($content, "\x07") || str_contains($content, '')) {
+            $content = str_replace(
+                search: ["\x07", ''],
+                replace: '',
+                subject: $content
+            );
+
+            $this->alert();
+        }
 
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
@@ -127,6 +145,17 @@ class Screen
         }
 
         return $this;
+    }
+
+    public function alert(): void
+    {
+        // Write the bell character directly to the output.
+        // This produces the alert tone (beep)
+        // without modifying the printable or ANSI buffers.
+        fwrite(STDOUT, "\x07");
+
+        // Flush the output buffer to ensure the alert tone is played immediately.
+        fflush(STDOUT);
     }
 
     public function writeln(string $content): void

@@ -24,7 +24,6 @@ use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
-use SoloTerm\Solo\Support\Screen;
 
 class Dashboard extends Prompt
 {
@@ -272,7 +271,7 @@ class Dashboard extends Prompt
         }
     }
 
-    protected function handleInteractiveInput()
+    protected function handleInteractiveInput(): void
     {
         $read = [STDIN];
         $write = null;
