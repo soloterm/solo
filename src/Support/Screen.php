@@ -93,8 +93,8 @@ class Screen
         // Convert raw backspace into an ANSI “cursor backward”
         // Also convert carriage returns to cursor-col=0:
         $content = str_replace(
-            search: ["\x08", "\x7f", "\r"],
-            replace: ["\e[D", "\e[D", "\e[G"],
+            search: ["\x08", "\r"],
+            replace: ["\e[D", "\e[G"],
             subject: $content
         );
 
