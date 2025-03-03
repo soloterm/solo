@@ -12,6 +12,7 @@ namespace SoloTerm\Solo\Commands\Concerns;
 use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -20,7 +21,6 @@ use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
-use Illuminate\Support\Facades\Config;
 
 trait ManagesProcess
 {
@@ -58,12 +58,12 @@ trait ManagesProcess
 
         // We have to make our own so that we can control pty.
         $process = app(PendingProcess::class)
-            ->when($useScreenCommand, fn (PendingProcess $process) => $process->command([
+            ->when($useScreenCommand, fn(PendingProcess $process) => $process->command([
                 'bash',
                 '-c',
                 "stty cols {$screen->width} rows {$screen->height} && screen -m -q {$this->command}",
             ]))
-            ->when(!$useScreenCommand, fn (PendingProcess $process) => $process->command($command))
+            ->when(!$useScreenCommand, fn(PendingProcess $process) => $process->command($command))
             ->forever()
             ->timeout(0)
             ->idleTimeout(0)
