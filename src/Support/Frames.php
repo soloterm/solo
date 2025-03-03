@@ -1,12 +1,5 @@
 <?php
 
-/**
- * @author Aaron Francis <aarondfrancis@gmail.com>
- *
- * @link https://aaronfrancis.com
- * @link https://twitter.com/aarondfrancis
- */
-
 declare(strict_types=1);
 
 /**
