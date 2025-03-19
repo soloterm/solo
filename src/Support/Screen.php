@@ -11,14 +11,16 @@ namespace SoloTerm\Solo\Support;
 
 use Closure;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HigherOrderCollectionProxy;
+use SoloTerm\Solo\Buffers\AnsiBuffer;
+use SoloTerm\Solo\Buffers\Buffer;
+use SoloTerm\Solo\Buffers\PrintableBuffer;
 
 class Screen
 {
-    public AnsiTracker $ansi;
+    public AnsiBuffer $ansi;
 
-    public Buffer $buffer;
+    public PrintableBuffer $printable;
 
     /**
      * A higher-order collection of both the Screen and ANSI buffers
@@ -29,7 +31,7 @@ class Screen
      *
      * @noinspection PhpDocFieldTypeMismatchInspection
      */
-    public HigherOrderCollectionProxy $bothBuffers;
+    public HigherOrderCollectionProxy $buffers;
 
     public int $cursorRow = 0;
 
@@ -49,10 +51,11 @@ class Screen
     {
         $this->width = $width;
         $this->height = $height;
-        $this->ansi = new AnsiTracker;
-        $this->buffer = new Buffer(usesStrings: true);
 
-        $this->bothBuffers = collect([$this->ansi->buffer, $this->buffer])->each;
+        $this->ansi = new AnsiBuffer;
+        $this->printable = (new PrintableBuffer)->setWidth($width);
+
+        $this->buffers = collect([$this->ansi, $this->printable])->each;
     }
 
     public function respondToQueriesVia(Closure $closure): static
@@ -64,66 +67,61 @@ class Screen
 
     public function output(): string
     {
-        // Get the most minimal representation of the ANSI
-        // buffer possible, eliminating all duplicates.
         $ansi = $this->ansi->compressedAnsiBuffer();
+        $printable = $this->printable->getBuffer();
+        $outputLines = [];
 
-        $buffer = $this->buffer->getBuffer();
+        foreach ($printable as $lineIndex => $line) {
+            // Get ANSI codes for this line (if any).
+            $ansiForLine = $ansi[$lineIndex] ?? [];
+            $lineStr = '';
 
-        foreach ($buffer as $k => &$line) {
-            // At this point, the keys represent the column where the ANSI code should
-            // be placed in the string and the values are the ANSI strings.
-            $ansiForLine = $ansi[$k] ?? [];
-
-            // Sort them in reverse by position so that we can start at the end of the
-            // string and work backwards so that all positions remain valid.
-            krsort($ansiForLine);
-
-            // Now, work backwards through the line inserting the codes.
-            foreach ($ansiForLine as $pos => $code) {
-                $line = mb_substr($line, 0, $pos, 'UTF-8') . $code . mb_substr($line, $pos, null, 'UTF-8');
+            for ($col = 0; $col < count($line); $col++) {
+                $lineStr .= ($ansiForLine[$col] ?? '') . $line[$col];
             }
+
+            $outputLines[] = $lineStr;
         }
 
-        return implode(PHP_EOL, $buffer);
+        return implode(PHP_EOL, $outputLines);
     }
 
     public function write(string $content): static
     {
+        // Backspace character gets replaced with "move one column backwards."
         // Carriage returns get replaced with a code to move to column 0.
-        $content = str_replace("\r", "\e[G", $content);
+
+        $content = str_replace(
+            search: ["\x08", "\r"],
+            replace: ["\e[D", "\e[G"],
+            subject: $content
+        );
 
         // Split the line by ANSI codes. Each item in the resulting array
         // will be a set of printable characters or an ANSI code.
         $parts = AnsiMatcher::split($content);
 
-        $i = 0;
-
-        while ($i < count($parts)) {
-            $part = $parts[$i];
-
+        foreach ($parts as $part) {
             if ($part instanceof AnsiMatch) {
                 if ($part->command) {
                     $this->handleAnsiCode($part);
-                } else {
-                    // Log::error('Unknown ANSI match:', [
-                    //     'line' => $content,
-                    //     'part' => $part->raw,
-                    // ]);
                 }
             } else {
+                if ($part === '') {
+                    continue;
+                }
+
                 $lines = explode(PHP_EOL, $part);
+                $linesCount = count($lines);
 
                 foreach ($lines as $index => $line) {
                     $this->handlePrintableCharacters($line);
 
-                    if ($index < count($lines) - 1) {
+                    if ($index < $linesCount - 1) {
                         $this->newlineWithScroll();
                     }
                 }
             }
-
-            $i++;
         }
 
         return $this;
@@ -180,9 +178,10 @@ class Screen
             $this->moveCursorCol($paramDefaultOne - 1);
 
         } elseif ($command === 'H') {
-            // Cursor home
-            $this->moveCursorRow(absolute: 0);
-            $this->moveCursorCol(absolute: 0);
+            $this->handleAbsoluteMove($ansi->params);
+
+        } elseif ($command === 'I') {
+            $this->handleTabulationMove($paramDefaultOne);
 
         } elseif ($command === 'J') {
             $this->handleEraseDisplay($paramDefaultZero);
@@ -190,19 +189,32 @@ class Screen
         } elseif ($command === 'K') {
             $this->handleEraseInLine($paramDefaultZero);
 
+        } elseif ($command === 'L') {
+            $this->handleInsertLines($paramDefaultOne);
+
+        } elseif ($command === 'S') {
+            $this->handleScrollUp($paramDefaultOne);
+
+        } elseif ($command === 'T') {
+            $this->handleScrollDown($paramDefaultOne);
+
         } elseif ($command === 'l' || $command === 'h') {
             // Show/hide cursor. We simply ignore these.
 
         } elseif ($command === 'm') {
             // Colors / graphics mode
             $this->handleSGR($param);
+
         } elseif ($command === '7') {
             $this->saveCursor();
+
         } elseif ($command === '8') {
             $this->restoreCursor();
+
         } elseif ($param === '?' && in_array($command, ['10', '11'])) {
             // Ask for the foreground or background color.
             $this->handleQueryCode($command, $param);
+
         } elseif ($command === 'n' && $param === '6') {
             // Ask for the cursor position.
             $this->handleQueryCode($command, $param);
@@ -213,7 +225,7 @@ class Screen
 
     protected function newlineWithScroll()
     {
-        if ($this->cursorRow >= $this->height - 1) {
+        if (($this->cursorRow - $this->linesOffScreen) >= $this->height - 1) {
             $this->linesOffScreen++;
         }
 
@@ -227,45 +239,16 @@ class Screen
             return;
         }
 
-        $this->buffer->expand($this->cursorRow);
+        $this->printable->expand($this->cursorRow);
 
-        $lineContent = $this->buffer[$this->cursorRow];
+        [$advance, $remainder] = $this->printable->writeString($this->cursorRow, $this->cursorCol, $text);
 
-        // If cursorCol is beyond current line length, pad with spaces.
-        $paddingRequired = $this->cursorCol - mb_strlen($lineContent, 'UTF-8');
-        if ($paddingRequired > 0) {
-            $lineContent .= str_repeat(' ', $paddingRequired);
-        }
+        $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $this->cursorCol, $this->cursorCol + $advance - 1);
 
-        $spaceRemaining = $this->width - $this->cursorCol;
+        $this->cursorCol += $advance;
 
-        // Text that doesn't fit on this line. We'll recursively call
-        // this function at the very end to add it to a new line.
-        $remainder = mb_substr($text, $spaceRemaining, null, 'UTF-8');
-
-        // The text that can fit on this line.
-        $text = mb_substr($text, 0, $spaceRemaining, 'UTF-8');
-
-        // The part of the line before the cursor.
-        $before = mb_substr($lineContent, 0, $this->cursorCol, 'UTF-8');
-
-        // The part of the line after the cursor *and* after our new content.
-        // It's possible we overwrote some characters, which is correct,
-        // but we might not have overwritten everything, so we
-        // need to append any leftovers.
-        $after = mb_substr($lineContent, $this->cursorCol + mb_strlen($text, 'UTF-8'), null, 'UTF-8');
-
-        $this->buffer[$this->cursorRow] = $before . $text . $after;
-
-        $startCol = $this->cursorCol;
-
-        // Update the cursor position forward by the length of the text
-        $this->moveCursorCol(absolute: mb_strlen($before . $text, 'UTF-8'));
-
-        // Fill the ANSI buffer with currently active flags, based
-        // on where the cursor started and where it ended.
-        $this->ansi->fillBufferWithActiveFlags($this->cursorRow, $startCol, max($startCol, $this->cursorCol - 1));
-
+        // If there's overflow (i.e. text that didn't fit on this line),
+        // move to a new line and recursively handle it.
         if ($remainder !== '') {
             $this->newlineWithScroll();
             $this->handlePrintableCharacters($remainder);
@@ -285,7 +268,7 @@ class Screen
         if ($this->stashedCursor) {
             [$col, $row] = $this->stashedCursor;
             $this->moveCursorCol(absolute: $col);
-            $this->moveCursorRow(absolute: $row + $this->linesOffScreen);
+            $this->moveCursorRow(absolute: $row);
             $this->stashedCursor = [];
         }
     }
@@ -328,7 +311,7 @@ class Screen
         $position = $this->cursorRow;
 
         if (!is_null($absolute)) {
-            $position = $absolute;
+            $position = $absolute + $this->linesOffScreen;
         }
 
         if (!is_null($relative)) {
@@ -340,7 +323,7 @@ class Screen
 
         $this->cursorRow = $position;
 
-        $this->buffer->expand($this->cursorRow);
+        $this->printable->expand($this->cursorRow);
     }
 
     protected function moveCursor(string $direction, ?int $absolute = null, ?int $relative = null): void
@@ -387,50 +370,145 @@ class Screen
         $this->ansi->addAnsiCodes(...$codes);
     }
 
+    protected function handleTabulationMove(int $tabs)
+    {
+        $tabStop = 8;
+
+        // If current column isn't at a tab stop, move to the next one.
+        $remainder = $this->cursorCol % $tabStop;
+        if ($remainder !== 0) {
+            $this->cursorCol += ($tabStop - $remainder);
+            $tabs--; // one tab stop consumed
+        }
+
+        // For any remaining tabs, move by full tab stops.
+        if ($tabs > 0) {
+            $this->cursorCol += $tabs * $tabStop;
+        }
+    }
+
+    protected function handleAbsoluteMove(string $params)
+    {
+        if ($params !== '') {
+            [$row, $col] = explode(';', $params);
+            $row = $row === '' ? 1 : intval($row);
+            $col = $col === '' ? 1 : intval($col);
+        } else {
+            $row = 1;
+            $col = 1;
+        }
+
+        // ANSI codes are 1-based, while our system is 0-based.
+        $this->moveCursorRow(absolute: --$row);
+        $this->moveCursorCol(absolute: --$col);
+    }
+
     protected function handleEraseDisplay(int $param): void
     {
         if ($param === 0) {
             // \e[0J - Erase from cursor until end of screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol
             );
         } elseif ($param === 1) {
             // \e[1J - Erase from cursor until beginning of screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
             // \e[2J - Erase entire screen
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->linesOffScreen,
                 endRow: $this->linesOffScreen + $this->height,
             );
         }
     }
 
+    protected function handleInsertLines(int $lines): void
+    {
+        $allowed = $this->height - ($this->cursorRow - $this->linesOffScreen);
+        $afterCursor = $lines + count($this->printable->buffer) - $this->cursorRow;
+
+        $chop = $afterCursor - $allowed;
+
+        // Ensure the buffer has enough rows so that $this->cursorRow is defined.
+        if (!isset($this->printable->buffer[$this->cursorRow])) {
+            $this->printable->expand($this->cursorRow);
+        }
+
+        if (!isset($this->ansi->buffer[$this->cursorRow])) {
+            $this->ansi->expand($this->cursorRow);
+        }
+
+        // Create an array of $lines empty arrays.
+        $newLines = array_fill(0, $lines, []);
+
+        // Insert the new lines at the cursor row index.
+        // array_splice will insert these new arrays and push the existing rows down.
+        array_splice($this->printable->buffer, $this->cursorRow, 0, $newLines);
+        array_splice($this->ansi->buffer, $this->cursorRow, 0, $newLines);
+
+        if ($chop > 0) {
+            array_splice($this->printable->buffer, -$chop);
+            array_splice($this->ansi->buffer, -$chop);
+        }
+    }
+
+    protected function handleScrollDown(int $param): void
+    {
+        $stash = $this->cursorRow;
+
+        $this->cursorRow = $this->linesOffScreen;
+
+        $this->handleInsertLines($param);
+
+        $this->cursorRow = $stash;
+    }
+
+    protected function handleScrollUp(int $param): void
+    {
+        $stash = $this->cursorRow;
+
+        $this->printable->expand($this->height);
+
+        $this->cursorRow = count($this->printable->buffer) + $param - 1;
+
+        $this->handleInsertLines($param);
+
+        $this->linesOffScreen += $param;
+
+        $this->cursorRow = $stash + $param;
+    }
+
     protected function handleEraseInLine(int $param): void
     {
         if ($param === 0) {
             // \e[0K - Erase from cursor to end of line
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 startCol: $this->cursorCol,
                 endRow: $this->cursorRow
             );
 
+            $background = $this->ansi->getActiveBackground();
+
+            if ($background !== 0) {
+                $this->printable->fill(' ', $this->cursorRow, $this->cursorCol, $this->width - 1);
+                $this->ansi->fill($background, $this->cursorRow, $this->cursorCol, $this->width - 1);
+            }
         } elseif ($param == 1) {
             // \e[1K - Erase start of line to the cursor
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow,
                 endCol: $this->cursorCol
             );
         } elseif ($param === 2) {
             // \e[2K - Erase the entire line
-            $this->bothBuffers->clear(
+            $this->buffers->clear(
                 startRow: $this->cursorRow,
                 endRow: $this->cursorRow
             );

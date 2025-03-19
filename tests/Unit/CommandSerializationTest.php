@@ -10,6 +10,15 @@ use SoloTerm\Solo\Commands\Command;
 
 class CommandSerializationTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        $this->beforeApplicationDestroyed(function () {
+            $this->artisan('config:clear');
+        });
+
+        parent::setUp();
+    }
+
     #[Test]
     public function command_config_can_be_serialized_and_cached(): void
     {

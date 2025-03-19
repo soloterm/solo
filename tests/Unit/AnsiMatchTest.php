@@ -26,6 +26,15 @@ class AnsiMatchTest extends Base
     //    }
 
     #[Test]
+    public function home_command_accepts_params()
+    {
+        $sequence = '[5;10H';
+        $result = AnsiMatcher::split("\e{$sequence}");
+
+        $this->assertEquals('5;10', $result[0]->params);
+    }
+
+    #[Test]
     public function all(): void
     {
         // https://raw.githubusercontent.com/chalk/ansi-regex/refs/heads/main/fixtures/ansi-codes.js
@@ -179,6 +188,7 @@ class AnsiMatchTest extends Base
 
             ['[H', ['Move cursor to upper left corner', 'cursorhome']],
             ['[;H', ['Move cursor to upper left corner', 'cursorhome']],
+            ['[5;10H', ['Move cursor to row 5 col 10', 'cursorhome']],
             ['[f', ['Move cursor to upper left corner', 'hvhome']],
             ['[;f', ['Move cursor to upper left corner', 'hvhome']],
             ['M', ['Move/scroll window down one line', 'RI']],

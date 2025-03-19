@@ -18,7 +18,8 @@
         "ext-pcntl": "*",
         "ext-posix": "*",
         "laravel/prompts": "^0.1.21|^0.2|^0.3",
-        "joetannenbaum/chewie": "^0.1"
+        "joetannenbaum/chewie": "^0.1",
+        "soloterm/grapheme": "^1"
     },
     "require-dev": {
         "illuminate/database": "^10|^11|^12",
@@ -32,8 +33,6 @@
         }
     },
     "autoload-dev": {
-        "files": [
-        ],
         "psr-4": {
             "SoloTerm\\Solo\\Tests\\": "tests/",
             "App\\": "workbench/app/"
