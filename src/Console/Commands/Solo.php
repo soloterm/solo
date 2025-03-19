@@ -45,7 +45,7 @@ class Solo extends Command
                 Log::error("The installed version of `screen` ({$matches[1]}) is outdated. Please upgrade to 5.0.0 or greater for best compatibility with Solo.");
             }
         } else {
-            Log::error("Unable to determine `screen` version. Make sure `screen` is installed.");
+            Log::error('Unable to determine `screen` version. Make sure `screen` is installed.');
         }
 
     }
