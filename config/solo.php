@@ -61,8 +61,10 @@ return [
     ],
 
     /**
-     * Some environments do not have the `screen`-command installed.
-     * You can disable the use of it by disabling this config value.
+     * By default, we prefer to use GNU Screen as an intermediary between Solo
+     * and the underlying process. This helps us with many issues, including
+     * PTY and some ANSI rendering things. Not all environments have Screen,
+     * so you can turn it off for a slightly degraded experience.
      */
     'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
 

@@ -19,6 +19,7 @@ use ReflectionClass;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
+use SoloTerm\Solo\Support\SafeBytes;
 use SoloTerm\Solo\Support\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
@@ -414,7 +415,7 @@ trait ManagesProcess
         // Calling `running` on it defers to the Symfony process `isRunning` method. That
         // method calls a protected method `updateStatus` which calls a private method
         // `readPipes` which invokes the output callback, adding it to our buffer.
-        $this->process?->running();
+        $running = $this->process?->running();
 
         $after = strlen($this->partialBuffer);
 
@@ -444,6 +445,14 @@ trait ManagesProcess
             return;
         }
 
+        // When a process is killed, it's entirely possible that we don't have very much output
+        // to write but still could've spliced a multibyte character. This will cause failure
+        // further down the line. Here we get only the non-spliced bytes. If we haven't
+        // spliced anything this method returns everything as is, which is the hope!
+        if (!$running) {
+            $write = head(SafeBytes::parse($write));
+        }
+
         $this->partialBuffer = substr($this->partialBuffer, strlen($write));
 
         $this->addOutput($write);
@@ -453,7 +462,13 @@ trait ManagesProcess
     {
         // The pattern \X is a PCRE escape that matches an extended
         // grapheme cluster—that is, a complete visual unit.
-        preg_match_all("/\X/u", $input, $matches);
+        $success = preg_match_all("/\X/u", $input, $matches);
+
+        // If the regex failed, we'll try to use our SafeBytes class
+        // to figure out where we spliced a multibyte character.
+        if (!$success) {
+            return head(SafeBytes::parse($input));
+        }
 
         // Return everything before the last grapheme cluster.
         return implode('', array_splice($matches[0], 0, -1));
