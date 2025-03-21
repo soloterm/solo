@@ -13,3 +13,4 @@ tests/Screenshots
 docs/*.blade.php
 docs/**/*.blade.php
 .phpunit.cache/test-results
+.DS_Store
