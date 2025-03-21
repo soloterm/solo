@@ -22,9 +22,9 @@ use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
-use SoloTerm\Solo\Support\Screen;
 
 class Dashboard extends Prompt
 {

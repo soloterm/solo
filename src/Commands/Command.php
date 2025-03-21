@@ -16,9 +16,9 @@ use Illuminate\Support\Str;
 use SoloTerm\Solo\Commands\Concerns\ManagesProcess;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Hotkeys\KeyHandler;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\KeyPressListener;
-use SoloTerm\Solo\Support\Screen;
 use SplQueue;
 
 class Command implements Loopable

@@ -15,9 +15,9 @@ use Laravel\Prompts\Concerns\Colors;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\BaseConverter;
-use SoloTerm\Solo\Support\Screen;
 
 class EnhancedTailCommand extends Command
 {

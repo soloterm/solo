@@ -11,7 +11,7 @@ namespace SoloTerm\Solo\Popups;
 
 use Laravel\Prompts\Concerns\Colors;
 use SoloTerm\Solo\Commands\Command;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 class Quitting extends Popup
 {
