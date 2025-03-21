@@ -19,7 +19,8 @@
         "ext-posix": "*",
         "laravel/prompts": "^0.1.21|^0.2|^0.3",
         "joetannenbaum/chewie": "^0.1",
-        "soloterm/grapheme": "^1"
+        "soloterm/grapheme": "^1",
+        "soloterm/dumps": "^1.0.0"
     },
     "require-dev": {
         "illuminate/database": "^10|^11|^12",
