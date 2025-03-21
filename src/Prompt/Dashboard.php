@@ -16,13 +16,13 @@ use Chewie\Concerns\SetsUpAndResets;
 use Illuminate\Support\Collection;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\Terminal;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Events\Event;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
-use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
 
