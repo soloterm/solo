@@ -11,13 +11,11 @@ namespace SoloTerm\Solo\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use SoloTerm\Solo\Console\Commands\About;
-use SoloTerm\Solo\Console\Commands\Dumps;
 use SoloTerm\Solo\Console\Commands\Install;
 use SoloTerm\Solo\Console\Commands\Make;
 use SoloTerm\Solo\Console\Commands\Monitor;
 use SoloTerm\Solo\Console\Commands\Solo;
 use SoloTerm\Solo\Manager;
-use SoloTerm\Solo\Support\CustomDumper;
 
 class SoloServiceProvider extends ServiceProvider
 {
