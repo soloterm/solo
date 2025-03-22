@@ -10,8 +10,8 @@
 namespace SoloTerm\Solo\Popups;
 
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Hotkeys\KeycodeMap;
-use SoloTerm\Solo\Support\Screen;
 
 abstract class Popup
 {

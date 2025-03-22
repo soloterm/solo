@@ -22,6 +22,7 @@ use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Tests\Support\SoloTestServiceProvider;
 use Symfony\Component\Process\InputStream;
+use Throwable;
 
 use function Orchestra\Testbench\package_path;
 
@@ -85,8 +86,8 @@ abstract class Base extends TestCase
 
         try {
             $this->execute($actions, $provider);
-        } catch (\Throwable $e) {
-
+        } catch (Throwable $e) {
+            //
         }
 
         // Kill alt screen

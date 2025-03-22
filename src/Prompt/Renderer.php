@@ -17,13 +17,13 @@ use Illuminate\Support\Str;
 use Laravel\Prompts\Themes\Default\Concerns\DrawsScrollbars;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Contracts\Theme;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Support\AnsiAware;
-use SoloTerm\Solo\Support\Screen;
 
 class Renderer extends PromptsRenderer
 {
