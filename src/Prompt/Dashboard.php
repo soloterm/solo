@@ -9,7 +9,7 @@
 
 namespace SoloTerm\Solo\Prompt;
 
-use Carbon\CarbonImmutable;
+use Carbon\{Carbon, CarbonImmutable};
 use Chewie\Concerns\CreatesAnAltScreen;
 use Chewie\Concerns\Loops;
 use Chewie\Concerns\SetsUpAndResets;
@@ -49,6 +49,8 @@ class Dashboard extends Prompt
 
     public ?Popup $popup = null;
 
+    protected ?Carbon $lastInput = null;
+
     public static function start(): void
     {
         (new static)->run();
@@ -80,6 +82,8 @@ class Dashboard extends Prompt
             ->all();
 
         $this->registerLoopables(...$this->commands);
+
+        $this->lastInput = now();
     }
 
     public function listenForEvents()
@@ -167,6 +171,7 @@ class Dashboard extends Prompt
                 $hotkey->init($this->currentCommand(), $this);
                 $this->listener->on($hotkey->keys, $hotkey->handle(...));
             });
+        $this->listener->wildcard(fn() => ($this->lastInput = now()));
     }
 
     public function enterInteractiveMode()
@@ -185,6 +190,7 @@ class Dashboard extends Prompt
 
     public function selectTab(int $index)
     {
+        $this->lastInput = now();
         $this->currentCommand()->blur();
         $this->selectedCommand = $index;
         $this->currentCommand()->focus();
@@ -216,6 +222,17 @@ class Dashboard extends Prompt
         if ($this->lastSelectedCommand !== $this->selectedCommand) {
             $this->lastSelectedCommand = $this->selectedCommand;
             $this->rebindHotkeys();
+        }
+
+        // if last input was 5 seconds ago, skip rendering to save cpu cycles
+        // if last output was less than a second ago - render it!
+        if (
+            $this->lastInput?->diffInSeconds(now()) > 5 &&
+            $this->currentCommand()->lastOutput?->diffInSeconds(now()) > 1
+        ) {
+            $this->listener->once();
+
+            return;
         }
 
         $this->currentCommand()->catchUpScroll();
