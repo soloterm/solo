@@ -204,6 +204,16 @@ class Dashboard extends Prompt
         );
     }
 
+    public function headTab()
+    {
+        $this->selectTab(0);
+    }
+
+    public function tailTab()
+    {
+        $this->selectTab(count($this->commands) - 1);
+    }
+
     protected function showDashboard(): void
     {
         $this->currentCommand()->focus($this);
