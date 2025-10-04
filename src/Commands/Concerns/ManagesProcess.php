@@ -199,14 +199,14 @@ trait ManagesProcess
         }
     }
 
-    public function withProcess(Closure $cb)
+    public function withProcess(Closure $cb): static
     {
         $this->processModifier = $cb;
 
         return $this;
     }
 
-    public function withEnv(array $env)
+    public function withEnv(array $env): static
     {
         $this->environment = $env;
 
