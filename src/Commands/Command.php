@@ -51,6 +51,17 @@ class Command implements Loopable
 
     protected ?string $workingDirectory = null;
 
+    /**
+     * Sequence number at which we last rendered the screen output.
+     * Used for differential rendering optimization.
+     */
+    protected int $lastRenderedSeqNo = 0;
+
+    /**
+     * Cached output from the last render.
+     */
+    protected ?string $cachedOutput = null;
+
     public static function from(string $command): static
     {
         return new static(command: $command);
@@ -117,6 +128,8 @@ class Command implements Loopable
         $this->height = $height;
 
         $this->screen = $this->makeNewScreen();
+        $this->cachedOutput = null;
+        $this->lastRenderedSeqNo = 0;
 
         return $this;
     }
@@ -223,6 +236,8 @@ class Command implements Loopable
     public function clear(): void
     {
         $this->screen = $this->makeNewScreen();
+        $this->cachedOutput = null;
+        $this->lastRenderedSeqNo = 0;
     }
 
     public function catchUpScroll(): void
@@ -296,9 +311,26 @@ class Command implements Loopable
 
     public function wrappedLines(): Collection
     {
-        $lines = explode(PHP_EOL, $this->screen->output());
+        // Check if the screen has changed since last render
+        $currentSeqNo = $this->screen->getSeqNo();
+
+        if ($this->cachedOutput === null || $currentSeqNo !== $this->lastRenderedSeqNo) {
+            // Screen has changed, get fresh output
+            $this->cachedOutput = $this->screen->output();
+            $this->lastRenderedSeqNo = $currentSeqNo;
+        }
+
+        $lines = explode(PHP_EOL, $this->cachedOutput);
 
         return $this->modifyWrappedLines(collect($lines))->values();
+    }
+
+    /**
+     * Check if the command's screen has new content since last render.
+     */
+    public function hasNewOutput(): bool
+    {
+        return $this->screen->getSeqNo() !== $this->lastRenderedSeqNo;
     }
 
     protected function makeNewScreen()
