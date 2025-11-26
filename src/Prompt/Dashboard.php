@@ -22,6 +22,7 @@ use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
+use SoloTerm\Solo\Support\DiffRenderer;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
 use SoloTerm\Screen\Screen;
@@ -49,6 +50,11 @@ class Dashboard extends Prompt
 
     public ?Popup $popup = null;
 
+    /**
+     * Differential renderer for efficient screen updates.
+     */
+    protected ?DiffRenderer $diffRenderer = null;
+
     public static function start(): void
     {
         (new static)->run();
@@ -65,6 +71,9 @@ class Dashboard extends Prompt
         [$this->width, $this->height] = $this->getDimensions();
 
         $this->frames = new Frames;
+
+        // Initialize differential renderer for efficient screen updates
+        $this->diffRenderer = new DiffRenderer($this->width, $this->height);
 
         $this->commands = collect(Solo::commands())
             ->tap(function (Collection $commands) {
@@ -152,6 +161,9 @@ class Dashboard extends Prompt
             $this->height = $height;
 
             collect($this->commands)->each->setDimensions($this->width, $this->height);
+
+            // Update diff renderer dimensions (this also invalidates the state)
+            $this->diffRenderer?->setDimensions($this->width, $this->height);
         }
 
         return false;
@@ -241,16 +253,31 @@ class Dashboard extends Prompt
 
     protected function render(): void
     {
-        // This is basically what the parent `render` function does, but we can make a
-        // few improvements given our unique setup. In Solo, we guarantee that the
-        // entire screen is going to be written with characters, including spaces
-        // padded all the way to the width of the terminal. Since that's the case,
-        // we can merely move the cursor up and to (1,1) and rewrite everything.
-        // Since much of the screen stays the same, it just overwrite in place.
-        // The good news is since we never cleared we don't get any flicker.
+        // Generate the frame using the standard renderer
         $renderer = Solo::getRenderer();
-        $frame = (new $renderer($this))($this);
+        $rendererInstance = (new $renderer($this))($this);
 
+        // The Renderer returns itself, but __toString gives us the frame
+        $frame = (string) $rendererInstance;
+
+        // Try differential rendering if available
+        if ($this->diffRenderer !== null && method_exists($rendererInstance, 'getScreen')) {
+            try {
+                $screen = $rendererInstance->getScreen();
+                $output = $this->diffRenderer->render($screen);
+
+                if ($output !== '') {
+                    $this->output()->write($output);
+                }
+
+                return;
+            } catch (\Throwable $e) {
+                // Differential rendering failed, fall through to string comparison
+                $this->diffRenderer = null; // Disable for future frames
+            }
+        }
+
+        // Fallback to string-based comparison (original behavior)
         if ($frame !== $this->prevFrame) {
             static::writeDirectly("\e[{$this->height}F");
             $this->output()->write($frame);

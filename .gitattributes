@@ -11,3 +11,4 @@
 /storage            export-ignore
 /bootstrap          export-ignore
 /src/Console/Commands/Test.php export-ignore
+/src/Console/Commands/Local.php export-ignore
