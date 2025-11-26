@@ -23,7 +23,7 @@ use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Support\AnsiAware;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 class Renderer extends PromptsRenderer
 {

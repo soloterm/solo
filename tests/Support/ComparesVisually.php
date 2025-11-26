@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 use Laravel\Prompts\Terminal;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionClass;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 use function Orchestra\Testbench\package_path;
 

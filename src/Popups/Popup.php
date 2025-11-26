@@ -11,7 +11,7 @@ namespace SoloTerm\Solo\Popups;
 
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use SoloTerm\Solo\Hotkeys\KeycodeMap;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 abstract class Popup
 {

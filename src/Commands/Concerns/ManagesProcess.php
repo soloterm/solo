@@ -20,7 +20,7 @@ use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use SoloTerm\Solo\Support\SafeBytes;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
 

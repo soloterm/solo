@@ -17,7 +17,7 @@ use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\BaseConverter;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 class EnhancedTailCommand extends Command
 {

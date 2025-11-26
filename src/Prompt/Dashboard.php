@@ -24,7 +24,7 @@ use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Popups\Quitting;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 class Dashboard extends Prompt
 {
