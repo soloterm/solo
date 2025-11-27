@@ -18,4 +18,14 @@ class KeyPressListener extends \Chewie\Input\KeyPressListener
 
         return $this->clearExisting();
     }
+
+    /**
+     * Process a key that was already read from input.
+     * This allows external code to handle the input reading
+     * while still using the listener's key handling logic.
+     */
+    public function processKey(string $key): void
+    {
+        $this->handleKey($key);
+    }
 }

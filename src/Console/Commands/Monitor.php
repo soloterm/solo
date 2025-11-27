@@ -10,11 +10,26 @@
 namespace SoloTerm\Solo\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use SoloTerm\Solo\Support\ProcessTracker;
 
 class Monitor extends Command
 {
+    /**
+     * Polling interval in microseconds (250ms).
+     * Faster polling catches new children more quickly.
+     */
+    protected const POLL_INTERVAL_US = 250_000;
+
+    /**
+     * Interval for culling dead children (10 seconds).
+     */
+    protected const CULL_INTERVAL_S = 10;
+
+    /**
+     * Grace period after parent death before killing children (500ms).
+     */
+    protected const GRACE_PERIOD_US = 500_000;
+
     protected $signature = 'solo:monitor {pid}';
 
     protected $description = 'Watch for the stray processes and clean them up.';
@@ -23,21 +38,24 @@ class Monitor extends Command
     {
         $parent = $this->argument('pid');
         $children = [];
+        $lastCullTime = time();
 
         $this->info("Monitoring parent process PID: {$parent}");
 
         while (true) {
-            $children = array_unique([
-                ...$children,
-                ...ProcessTracker::children($parent)
-            ]);
+            // Discover new children
+            $newChildren = ProcessTracker::children($parent);
+            $children = array_unique([...$children, ...$newChildren]);
 
-            // Every 10 seconds cull the children that are no longer running.
-            if (Carbon::now()->second % 10 === 0) {
+            // Time-based culling (more reliable than second % 10)
+            $now = time();
+            if (($now - $lastCullTime) >= static::CULL_INTERVAL_S) {
                 $children = ProcessTracker::running($children);
+                $lastCullTime = $now;
             }
 
-            sleep(1);
+            // Shorter sleep for more responsive detection
+            usleep(static::POLL_INTERVAL_US);
 
             if (ProcessTracker::isRunning($parent)) {
                 continue;
@@ -45,15 +63,20 @@ class Monitor extends Command
 
             $this->warn("Parent process {$parent} has died.");
 
-            // Give them a chance to die on their own.
-            sleep(2);
+            // Short grace period for processes to exit on their own
+            usleep(static::GRACE_PERIOD_US);
 
-            // Don't kill ourselves.
+            // Final child enumeration to catch any last spawns
+            $finalChildren = ProcessTracker::children($parent);
+            $children = array_unique([...$children, ...$finalChildren]);
+
+            // Don't kill ourselves
             $children = array_diff($children, [getmypid()]);
 
-            ProcessTracker::kill($children);
-
-            $this->warn('Killed processes: ' . implode(', ', $children));
+            if (!empty($children)) {
+                ProcessTracker::kill($children);
+                $this->warn('Killed processes: ' . implode(', ', $children));
+            }
 
             $this->info('All tracked child processes cleaned up. Exiting.');
 
