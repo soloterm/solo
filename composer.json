@@ -21,7 +21,7 @@
         "joetannenbaum/chewie": "^0.1",
         "soloterm/grapheme": "^1",
         "soloterm/dumps": "^1.0.0",
-        "soloterm/screen": "^1"
+        "soloterm/screen": "^1.1.0"
     },
     "require-dev": {
         "illuminate/database": "^10|^11|^12",
