@@ -23,14 +23,12 @@ class MakeCommand extends Command
 
     public function whenStopping()
     {
-        $this->potentiallyExitOpenPrompts();
-        $this->potentiallyExitOpenPrompts();
-        $this->potentiallyExitOpenPrompts();
-    }
-
-    protected function potentiallyExitOpenPrompts()
-    {
-        if (!$this->input->isClosed()) {
+        // Send multiple Ctrl+C signals to exit potentially nested prompts.
+        // Each prompt may need its own signal to close properly.
+        for ($i = 0; $i < 3; $i++) {
+            if ($this->input->isClosed()) {
+                break;
+            }
             $this->input->write(Key::CTRL_C);
         }
     }

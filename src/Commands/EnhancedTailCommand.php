@@ -87,12 +87,8 @@ class EnhancedTailCommand extends Command
             return;
         }
 
-        // Opening in write mode truncates (or creates.)
-        $handle = fopen($this->file, 'w');
-
-        if ($handle !== false) {
-            fclose($handle);
-        }
+        // Truncate file atomically without manual resource management.
+        file_put_contents($this->file, '');
 
         // Clear the logs held in memory.
         $this->clear();
