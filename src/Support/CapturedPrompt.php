@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Support;
 
 use Exception;
+use Laravel\Prompts\Key;
 use Laravel\Prompts\Themes\Default as Themes;
 use ReflectionClass;
 
@@ -87,5 +88,15 @@ trait CapturedPrompt
     public function __destruct()
     {
         // Not needed as we're not using the real terminal.
+    }
+
+    public function handleInput($key)
+    {
+        $continue = $this->callNativeKeyPressHandler($key);
+
+        if ($continue === false || $key === Key::CTRL_C) {
+            $this->complete = true;
+            $this->clearListeners();
+        }
     }
 }
