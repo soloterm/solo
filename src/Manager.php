@@ -12,7 +12,6 @@ namespace SoloTerm\Solo;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
 use ReflectionClass;
@@ -76,7 +75,7 @@ class Manager
             );
         }
 
-        $this->warnIfUnsafeTestCommand($command, $name);
+        $this->blockIfUnsafeTestCommand($command);
 
         $this->commands[] = $command;
 
@@ -91,13 +90,14 @@ class Manager
     }
 
     /**
-     * Warn if a test command is added without using TestCommand.
+     * Block unsafe test commands that might wipe local databases.
      *
-     * Test commands run without APP_ENV=testing can accidentally wipe local databases.
+     * Test commands run without APP_ENV=testing can accidentally destroy local data.
+     * This method blocks such commands and displays a warning in the panel.
      *
      * @see https://github.com/soloterm/solo/issues/97
      */
-    protected function warnIfUnsafeTestCommand(Command $command, ?string $name): void
+    protected function blockIfUnsafeTestCommand(Command $command): void
     {
         // If it's already a TestCommand, APP_ENV=testing is set automatically.
         if ($command instanceof TestCommand) {
@@ -114,14 +114,21 @@ class Manager
             return;
         }
 
-        $displayName = $name ?? $command->name ?? $command->command;
-
-        Log::warning(
-            "Solo: The command '{$displayName}' looks like a test command but is not using TestCommand. " .
-            'Tests may run in the wrong environment and could wipe your local database! ' .
-            'Use TestCommand::artisan(), TestCommand::pest(), or TestCommand::phpunit() instead, ' .
-            'or add ->withEnv([\'APP_ENV\' => \'testing\']) to your command. ' .
-            'See: https://github.com/soloterm/solo/issues/97'
+        $command->block(
+            "This test command may wipe your local database!\n" .
+            "\n" .
+            "Tests should run with APP_ENV=testing to use the test\n" .
+            "database instead of your local development database.\n" .
+            "\n" .
+            "To fix this, update your config/solo.php to use:\n" .
+            "\n" .
+            "  'Tests' => TestCommand::artisan(),\n" .
+            "  'Tests' => TestCommand::pest(),\n" .
+            "  'Tests' => TestCommand::phpunit(),\n" .
+            "\n" .
+            "Or add ->withEnv(['APP_ENV' => 'testing']) to your command.\n" .
+            "\n" .
+            "See: https://github.com/soloterm/solo/issues/97"
         );
     }
 

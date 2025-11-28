@@ -263,11 +263,29 @@ trait ManagesProcess
 
     public function start(): void
     {
+        // If the command is blocked, display the warning instead of starting.
+        if ($this->isBlocked()) {
+            $this->displayBlockedWarning();
+
+            return;
+        }
+
         $this->beforeStart();
 
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
             $this->partialBuffer .= $buffer;
         });
+    }
+
+    protected function displayBlockedWarning(): void
+    {
+        $errorBox = new ErrorBox(
+            message: $this->getBlockedReason() ?? 'This command has been blocked.',
+            title: 'Blocked',
+            color: 'yellow'
+        );
+
+        $this->addOutput($errorBox->render());
     }
 
     public function whenStopping()

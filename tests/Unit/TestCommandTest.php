@@ -2,7 +2,6 @@
 
 namespace SoloTerm\Solo\Tests\Unit;
 
-use Illuminate\Support\Facades\Log;
 use Orchestra\Testbench\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -103,51 +102,70 @@ class TestCommandTest extends TestCase
     }
 
     #[Test]
-    public function manager_warns_when_test_command_added_without_testing_env(): void
+    public function manager_blocks_test_command_without_testing_env(): void
     {
-        Log::shouldReceive('warning')
-            ->once()
-            ->withArgs(function ($message) {
-                return str_contains($message, 'looks like a test command')
-                    && str_contains($message, 'TestCommand');
-            });
-
         config()->set('solo.commands', []);
         $manager = new Manager;
         $manager->addCommand('php artisan test', 'Tests');
+
+        $commands = $manager->commands();
+        $testCommand = end($commands);
+
+        $this->assertTrue($testCommand->isBlocked());
+        $this->assertStringContainsString('wipe your local database', $testCommand->getBlockedReason());
+        $this->assertStringContainsString('TestCommand::artisan()', $testCommand->getBlockedReason());
     }
 
     #[Test]
-    public function manager_does_not_warn_when_test_command_uses_test_command_class(): void
+    public function manager_does_not_block_when_test_command_uses_test_command_class(): void
     {
-        Log::shouldReceive('warning')->never();
-
         config()->set('solo.commands', []);
         $manager = new Manager;
         $manager->addCommand(TestCommand::artisan(), 'Tests');
+
+        $commands = $manager->commands();
+        $testCommand = end($commands);
+
+        $this->assertFalse($testCommand->isBlocked());
     }
 
     #[Test]
-    public function manager_does_not_warn_when_test_command_has_env_set(): void
+    public function manager_does_not_block_when_test_command_has_env_set(): void
     {
-        Log::shouldReceive('warning')->never();
-
         config()->set('solo.commands', []);
         $manager = new Manager;
         $manager->addCommand(
             Command::from('php artisan test')->withEnv(['APP_ENV' => 'testing']),
             'Tests'
         );
+
+        $commands = $manager->commands();
+        $testCommand = end($commands);
+
+        $this->assertFalse($testCommand->isBlocked());
     }
 
     #[Test]
-    public function manager_does_not_warn_for_non_test_commands(): void
+    public function manager_does_not_block_non_test_commands(): void
     {
-        Log::shouldReceive('warning')->never();
-
         config()->set('solo.commands', []);
         $manager = new Manager;
         $manager->addCommand('npm run dev', 'Vite');
         $manager->addCommand('php artisan queue:work', 'Queue');
+
+        $commands = $manager->commands();
+
+        foreach ($commands as $command) {
+            $this->assertFalse($command->isBlocked());
+        }
+    }
+
+    #[Test]
+    public function blocked_command_does_not_autostart(): void
+    {
+        $command = new Command('Tests', 'php artisan test');
+        $command->block('Test reason');
+
+        $this->assertFalse($command->autostart);
     }
 }
