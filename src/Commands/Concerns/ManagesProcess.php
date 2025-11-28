@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use SoloTerm\Solo\Support\SafeBytes;
-use SoloTerm\Screen\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
 
