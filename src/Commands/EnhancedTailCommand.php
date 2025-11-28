@@ -317,7 +317,7 @@ class EnhancedTailCommand extends Command
             $keep[$lastVendorIndex] = true;
         }
 
-        return $lines->filter(fn($v, $k) => isset($keep[$k]));
+        return $lines->filter(fn($_, $k) => isset($keep[$k]));
     }
 
     protected function formatInitialException($line): array

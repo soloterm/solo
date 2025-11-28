@@ -29,7 +29,12 @@ class MakeCommand extends Command
             if ($this->input->isClosed()) {
                 break;
             }
-            $this->input->write(Key::CTRL_C);
+            try {
+                $this->input->write(Key::CTRL_C);
+            } catch (\RuntimeException $e) {
+                // Stream closed between check and write; exit gracefully
+                break;
+            }
         }
     }
 }
