@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
 use ReflectionClass;
+use Illuminate\Support\Facades\Log;
 use SoloTerm\Solo\Commands\Command;
+use SoloTerm\Solo\Commands\TestCommand;
 use SoloTerm\Solo\Concerns\HasEvents;
 use SoloTerm\Solo\Contracts\HotkeyProvider;
 use SoloTerm\Solo\Contracts\Theme;
@@ -74,6 +76,8 @@ class Manager
             );
         }
 
+        $this->warnIfUnsafeTestCommand($command, $name);
+
         $this->commands[] = $command;
 
         return $this;
@@ -84,6 +88,41 @@ class Manager
         $this->commands = [];
 
         return $this;
+    }
+
+    /**
+     * Warn if a test command is added without using TestCommand.
+     *
+     * Test commands run without APP_ENV=testing can accidentally wipe local databases.
+     *
+     * @see https://github.com/soloterm/solo/issues/97
+     */
+    protected function warnIfUnsafeTestCommand(Command $command, ?string $name): void
+    {
+        // If it's already a TestCommand, APP_ENV=testing is set automatically.
+        if ($command instanceof TestCommand) {
+            return;
+        }
+
+        // If APP_ENV is already set to testing, the user knows what they're doing.
+        if (($command->getEnvironment()['APP_ENV'] ?? null) === 'testing') {
+            return;
+        }
+
+        // Check if this looks like a test command.
+        if (!$command->command || !TestCommand::looksLikeTestCommand($command->command)) {
+            return;
+        }
+
+        $displayName = $name ?? $command->name ?? $command->command;
+
+        Log::warning(
+            "Solo: The command '{$displayName}' looks like a test command but is not using TestCommand. " .
+            'Tests may run in the wrong environment and could wipe your local database! ' .
+            'Use TestCommand::artisan(), TestCommand::pest(), or TestCommand::phpunit() instead, ' .
+            'or add ->withEnv([\'APP_ENV\' => \'testing\']) to your command. ' .
+            'See: https://github.com/soloterm/solo/issues/97'
+        );
     }
 
     public function loadCommands(): static

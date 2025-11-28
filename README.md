@@ -64,7 +64,7 @@ Define your commands in the `commands` array:
     // Lazy commands don't start automatically
     'Dumps' => Command::from('php artisan solo:dumps')->lazy(),
     'Queue' => Command::from('php artisan queue:work')->lazy(),
-    'Tests' => Command::from('php artisan test --colors=always')->lazy(),
+    'Tests' => TestCommand::artisan(),
 ],
 ```
 
@@ -181,6 +181,24 @@ It lives in a custom `MakeCommand` class.
 
 ```php
 'Make' => new MakeCommand,
+```
+
+### TestCommand
+
+The `TestCommand` provides a safe way to run tests that automatically sets `APP_ENV=testing`. This ensures your tests run in the correct environment and don't accidentally affect your local database.
+
+```php
+// Using Laravel's artisan test command (default)
+'Tests' => TestCommand::artisan(),
+
+// Using Pest
+'Tests' => TestCommand::pest(),
+
+// Using PHPUnit directly
+'Tests' => TestCommand::phpunit(),
+
+// Custom arguments
+'Tests' => TestCommand::artisan('--filter=UserTest'),
 ```
 
 ### `solo:dumps`

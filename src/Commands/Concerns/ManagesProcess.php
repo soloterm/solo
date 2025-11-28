@@ -242,6 +242,11 @@ trait ManagesProcess
         return $this;
     }
 
+    public function getEnvironment(): array
+    {
+        return $this->environment;
+    }
+
     public function autostart(): static
     {
         if ($this->autostart && $this->processStopped()) {

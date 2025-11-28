@@ -3,6 +3,7 @@
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
+use SoloTerm\Solo\Commands\TestCommand;
 use SoloTerm\Solo\Hotkeys;
 use SoloTerm\Solo\Themes;
 
@@ -57,7 +58,7 @@ return [
         'Reverb' => Command::from('php artisan reverb:start --debug')->lazy(),
         'Pint' => Command::from('./vendor/bin/pint --ansi')->lazy(),
         'Queue' => Command::from('php artisan queue:work')->lazy(),
-        'Tests' => Command::from('php artisan test --colors=always')->withEnv(['APP_ENV' => 'testing'])->lazy(),
+        'Tests' => TestCommand::artisan(),
     ],
 
     /**
