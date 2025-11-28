@@ -398,18 +398,28 @@ trait ManagesProcess
      */
     protected function discoverPtyDevice(int $pid): ?string
     {
+        // Detect current TTY to skip (the controlling terminal for this PHP process)
+        $currentTty = null;
+        if (function_exists('posix_ttyname')) {
+            $currentTty = @posix_ttyname(STDIN);
+        } elseif (PHP_OS_FAMILY !== 'Windows') {
+            $tty = @shell_exec('tty 2>/dev/null');
+            $currentTty = $tty ? trim($tty) : null;
+        }
+
         $output = [];
         exec(sprintf('lsof -p %d 2>/dev/null', $pid), $output);
 
         foreach ($output as $line) {
-            if (!preg_match('#(/dev/tty\S+|/dev/pty\S+)#', $line, $matches)) {
+            // Match /dev/tty*, /dev/pty*, and /dev/pts/* (Linux pseudo-terminals)
+            if (!preg_match('#(/dev/(tty\S+|pty\S+|pts/\d+))#', $line, $matches)) {
                 continue;
             }
 
             $device = $matches[1];
 
-            // Skip the main terminal device
-            if ($device === '/dev/ttys000') {
+            // Skip the main terminal device for this PHP process
+            if ($currentTty && $device === $currentTty) {
                 continue;
             }
 

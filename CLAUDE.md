@@ -39,7 +39,7 @@ composer install
 ```
 
 ### Testing the Package
-Since this is a Laravel package (not an application), it uses Orchestra Testbench for testing. Tests are in `/Users/aaron/Code/soloterm/solo/tests/` with two suites:
+Since this is a Laravel package (not an application), it uses Orchestra Testbench for testing. Tests are in the `tests/` directory with two suites:
 - `tests/Unit/` - Unit tests for individual components
 - `tests/Integration/` - Integration tests for full features
 
