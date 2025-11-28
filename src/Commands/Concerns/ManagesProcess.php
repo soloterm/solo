@@ -13,19 +13,27 @@ use Closure;
 use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
+use ReflectionException;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Support\ProcessTracker;
 use SoloTerm\Solo\Support\SafeBytes;
-use SoloTerm\Solo\Support\Screen;
 use Symfony\Component\Process\InputStream;
 use Symfony\Component\Process\Process as SymfonyProcess;
 
 trait ManagesProcess
 {
+    /**
+     * Maximum buffer size before forced flush.
+     * Balances memory usage, responsiveness, and UTF-8 safety.
+     */
+    protected const MAX_BUFFER_SIZE = 10_240;
+
     public ?InvokedProcess $process = null;
 
     public $outputStartMarker = '[[==SOLO_START==]]';
@@ -36,7 +44,7 @@ trait ManagesProcess
 
     protected bool $stopping = false;
 
-    protected ?Carbon $stopInitiatedAt;
+    protected ?Carbon $stopInitiatedAt = null;
 
     protected ?Closure $processModifier = null;
 
@@ -47,6 +55,27 @@ trait ManagesProcess
     protected $children = [];
 
     protected $environment = [];
+
+    /**
+     * Cached PTY device path for resize operations.
+     */
+    protected ?string $cachedPtyDevice = null;
+
+    /**
+     * PID associated with the cached PTY device.
+     */
+    protected ?int $cachedPtyDevicePid = null;
+
+    /**
+     * Counter for rate-limiting "Waiting..." messages.
+     */
+    protected int $waitingMessageCounter = 0;
+
+    /**
+     * Flag indicating output was received in the last tick.
+     * Used by Dashboard for adaptive frame rate.
+     */
+    protected bool $hadOutputThisTick = false;
 
     public function createPendingProcess(): PendingProcess
     {
@@ -144,7 +173,7 @@ trait ManagesProcess
 
     protected function localeEnvironmentVariables()
     {
-        $locale = $this->utf8Locale();
+        $locale = escapeshellarg($this->utf8Locale());
 
         return "export LC_ALL={$locale}; export LANG={$locale}";
     }
@@ -244,22 +273,48 @@ trait ManagesProcess
     public function stop(): void
     {
         $this->stopping = true;
+        $this->waitingMessageCounter = 0;
 
         $this->whenStopping();
 
         if ($this->processRunning()) {
-            $this->children = ProcessTracker::children($this->process->id());
-
-            // Keep track of when we tried to stop.
             $this->stopInitiatedAt ??= Carbon::now();
+            $this->sendTermSignals();
+        }
+    }
 
-            foreach ($this->children as $pid) {
-                $command = trim(shell_exec("ps -o command= -p $pid"));
+    /**
+     * Send SIGTERM to child processes (excluding Screen wrapper).
+     * Re-enumerates children each time to catch newly spawned processes.
+     */
+    protected function sendTermSignals(): void
+    {
+        $pid = $this->process?->id();
 
-                // If it doesn't contain 'screen' or 'SCREEN', it's likely our actual command
-                if (!Str::startsWith($command, 'screen') && !Str::startsWith($command, 'SCREEN')) {
-                    posix_kill((int) $pid, SIGTERM);
-                }
+        if (!$pid) {
+            return;
+        }
+
+        // Re-enumerate children to catch any new ones spawned since last check
+        $this->children = array_unique(array_merge(
+            $this->children,
+            ProcessTracker::children($pid)
+        ));
+
+        foreach ($this->children as $childPid) {
+            // Get command name, handling potential failures gracefully
+            $command = @shell_exec("ps -o command= -p $childPid 2>/dev/null");
+
+            if ($command === null || $command === false) {
+                // Process may have already exited
+                continue;
+            }
+
+            $command = trim($command);
+
+            // Skip the Screen wrapper process itself
+            if (!Str::startsWith($command, 'screen') && !Str::startsWith($command, 'SCREEN')) {
+                posix_kill((int) $childPid, SIGTERM);
             }
         }
     }
@@ -295,40 +350,83 @@ trait ManagesProcess
         return !$this->processRunning();
     }
 
+    /**
+     * Check if output was received in the last tick.
+     * Used by Dashboard for adaptive frame rate.
+     */
+    public function hadOutputThisTick(): bool
+    {
+        return $this->hadOutputThisTick;
+    }
+
+    /**
+     * Check if the process is in the stopping state.
+     */
+    public function isStopping(): bool
+    {
+        return $this->stopping;
+    }
+
     public function sendSizeViaStty(): void
     {
-        // If the process is not running or has no PID, we can’t do anything
-        $pid = $this->process->id();
+        $pid = $this->process?->id();
 
         if (!$pid) {
             return;
         }
 
-        // List all open files for the child process
-        $output = [];
+        // Use cached PTY device if we have one for this process
+        if ($this->cachedPtyDevicePid !== $pid) {
+            $this->cachedPtyDevice = $this->discoverPtyDevice($pid);
+            $this->cachedPtyDevicePid = $pid;
+        }
 
+        if (!$this->cachedPtyDevice) {
+            return;
+        }
+
+        exec(sprintf(
+            'stty rows %d cols %d < %s 2>/dev/null',
+            $this->scrollPaneHeight(),
+            $this->scrollPaneWidth(),
+            escapeshellarg($this->cachedPtyDevice)
+        ));
+    }
+
+    /**
+     * Discover the PTY device for a given process ID.
+     */
+    protected function discoverPtyDevice(int $pid): ?string
+    {
+        // Detect current TTY to skip (the controlling terminal for this PHP process)
+        $currentTty = null;
+        if (function_exists('posix_ttyname')) {
+            $currentTty = @posix_ttyname(STDIN);
+        } elseif (PHP_OS_FAMILY !== 'Windows') {
+            $tty = @shell_exec('tty 2>/dev/null');
+            $currentTty = $tty ? trim($tty) : null;
+        }
+
+        $output = [];
         exec(sprintf('lsof -p %d 2>/dev/null', $pid), $output);
 
         foreach ($output as $line) {
-            if (!preg_match('#(/dev/tty\S+|/dev/pty\S+)#', $line, $matches)) {
+            // Match /dev/tty*, /dev/pty*, and /dev/pts/* (Linux pseudo-terminals)
+            if (!preg_match('#(/dev/(tty\S+|pty\S+|pts/\d+))#', $line, $matches)) {
                 continue;
             }
 
             $device = $matches[1];
 
-            if ($device === '/dev/ttys000') {
+            // Skip the main terminal device for this PHP process
+            if ($currentTty && $device === $currentTty) {
                 continue;
             }
 
-            exec(sprintf(
-                'stty rows %d cols %d < %s',
-                $this->scrollPaneHeight(),
-                $this->scrollPaneWidth(),
-                escapeshellarg($device)
-            ));
-
-            break;
+            return $device;
         }
+
+        return null;
     }
 
     protected function clearStdOut()
@@ -345,14 +443,40 @@ trait ManagesProcess
         });
     }
 
+    /**
+     * Access the underlying Symfony Process via reflection.
+     * Includes safety checks for framework compatibility.
+     */
     protected function withSymfonyProcess(Closure $callback)
     {
-        /** @var SymfonyProcess $process */
-        $process = (new ReflectionClass(InvokedProcess::class))
-            ->getProperty('process')
-            ->getValue($this->process);
+        if (!$this->process) {
+            return null;
+        }
 
-        return $callback($process);
+        try {
+            $reflection = new ReflectionClass(InvokedProcess::class);
+
+            if (!$reflection->hasProperty('process')) {
+                Log::warning('Solo: InvokedProcess internal structure may have changed - missing process property');
+
+                return null;
+            }
+
+            $property = $reflection->getProperty('process');
+            $symfonyProcess = $property->getValue($this->process);
+
+            if (!$symfonyProcess instanceof SymfonyProcess) {
+                Log::warning('Solo: InvokedProcess internal structure may have changed - unexpected type');
+
+                return null;
+            }
+
+            return $callback($symfonyProcess);
+        } catch (ReflectionException $e) {
+            Log::warning('Solo: Failed to access Symfony process', ['error' => $e->getMessage()]);
+
+            return null;
+        }
     }
 
     protected function marshalProcess(): void
@@ -362,6 +486,7 @@ trait ManagesProcess
         if ($this->stopping && $this->processStopped()) {
             $this->stopping = false;
             $this->stopInitiatedAt = null;
+            $this->waitingMessageCounter = 0;
 
             ProcessTracker::kill($this->children);
 
@@ -380,7 +505,11 @@ trait ManagesProcess
 
         // We'll give it five seconds to terminate.
         if ($this->stopInitiatedAt->copy()->addSeconds(5)->isFuture()) {
-            if (Carbon::now()->microsecond < 25_000) {
+            // Re-send SIGTERM to any new children spawned during grace period
+            $this->sendTermSignals();
+
+            // Rate limit "Waiting..." messages (every ~1 second at 40 FPS)
+            if ($this->waitingMessageCounter++ % 40 === 0) {
                 $this->addLine('Waiting...');
             }
 
@@ -409,15 +538,28 @@ trait ManagesProcess
 
     protected function collectIncrementalOutput(): void
     {
+        // Reset the activity flag at the start of each collection cycle
+        $this->hadOutputThisTick = false;
+
         $before = strlen($this->partialBuffer);
 
-        // A bit of a hack, but there's no other way in. Process is a Laravel InvokedProcess.
-        // Calling `running` on it defers to the Symfony process `isRunning` method. That
-        // method calls a protected method `updateStatus` which calls a private method
-        // `readPipes` which invokes the output callback, adding it to our buffer.
+        // Explicitly trigger output collection by reading incremental output.
+        // This is more reliable than relying on running() side effects.
+        $this->withSymfonyProcess(function (SymfonyProcess $process) {
+            // These calls trigger pipe reading and invoke our output callback
+            $process->getIncrementalOutput();
+            $process->getIncrementalErrorOutput();
+        });
+
+        // Also check running status (needed for flush logic below)
         $running = $this->process?->running();
 
         $after = strlen($this->partialBuffer);
+
+        // Track if we received new output this tick
+        if ($after > $before) {
+            $this->hadOutputThisTick = true;
+        }
 
         if (!$before && !$after) {
             return;
@@ -430,7 +572,7 @@ trait ManagesProcess
             // @link https://github.com/aarondfrancis/solo/issues/33
             $this->clearStdOut();
             $this->clearStdErr();
-        } elseif ($after > 10_240) {
+        } elseif ($after > static::MAX_BUFFER_SIZE) {
             if (Str::contains($this->partialBuffer, "\n")) {
                 // We're over the limit, so look for a safe spot to cut, starting with newlines.
                 $write = Str::beforeLast($this->partialBuffer, "\n");
@@ -462,6 +604,8 @@ trait ManagesProcess
     {
         // The pattern \X is a PCRE escape that matches an extended
         // grapheme cluster—that is, a complete visual unit.
+        // We must use grapheme clusters (not just UTF-8 boundaries) because
+        // characters like emoji with variation selectors are multiple code points.
         $success = preg_match_all("/\X/u", $input, $matches);
 
         // If the regex failed, we'll try to use our SafeBytes class

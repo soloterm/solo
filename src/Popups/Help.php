@@ -10,7 +10,7 @@
 namespace SoloTerm\Solo\Popups;
 
 use Laravel\Prompts\Key;
-use SoloTerm\Solo\Support\Screen;
+use SoloTerm\Screen\Screen;
 
 class Help extends Popup
 {

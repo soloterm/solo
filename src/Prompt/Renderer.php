@@ -13,17 +13,16 @@ use Chewie\Concerns\Aligns;
 use Chewie\Concerns\DrawsHotkeys;
 use Chewie\Output\Util;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Laravel\Prompts\Themes\Default\Concerns\DrawsScrollbars;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Contracts\Theme;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Popups\Popup;
 use SoloTerm\Solo\Support\AnsiAware;
-use SoloTerm\Solo\Support\Screen;
 
 class Renderer extends PromptsRenderer
 {
@@ -40,6 +39,11 @@ class Renderer extends PromptsRenderer
     public int $height;
 
     protected Collection $visibleContent;
+
+    /**
+     * The Screen instance used for rendering.
+     */
+    protected ?Screen $screen = null;
 
     public function setup(Dashboard $dashboard): void
     {
@@ -59,32 +63,34 @@ class Renderer extends PromptsRenderer
         $this->renderContentPane();
         $this->renderHotkeys();
 
-        $screen = new Screen($this->width, $this->height);
-        $screen->write("\e[0m");
-        $screen->write($this->output);
+        $this->screen = new Screen($this->width, $this->height);
+        $this->screen->write("\e[0m");
+        $this->screen->write($this->output);
         // Move home then down two lines to get to the content pane.
-        $screen->write("\e[H\e[0m\e[2B");
+        $this->screen->write("\e[H\e[0m\e[2B");
 
         // Write the visible content into the pane, padding with two spaces.
-        $this->visibleContent->each(function ($line) use ($screen) {
-            $screen->writeln("\e[2C" . $line);
+        $this->visibleContent->each(function ($line) {
+            $this->screen->writeln("\e[2C" . $line);
         });
 
         if ($this->dashboard->popup) {
-            //            $screen = $this->accountForPopup($screen);
-            //
-            //            $old = $this->dashboard->popup;
-
-            //            $this->dashboard->popup = ;
-
-            $screen = $this->accountForPopup($screen, $this->dashboard->popup);
-
-            //            $this->dashboard->popup = $old;
+            $this->screen = $this->accountForPopup($this->screen, $this->dashboard->popup);
         }
 
-        $this->output = $screen->output();
+        $this->output = $this->screen->output();
 
         return $this;
+    }
+
+    /**
+     * Get the Screen instance used for rendering.
+     *
+     * This allows differential rendering by comparing Screens frame-to-frame.
+     */
+    public function getScreen(): ?Screen
+    {
+        return $this->screen;
     }
 
     public function __toString()

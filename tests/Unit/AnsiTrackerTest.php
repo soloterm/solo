@@ -10,7 +10,7 @@
 namespace SoloTerm\Solo\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Buffers\AnsiBuffer;
+use SoloTerm\Screen\Buffers\AnsiBuffer;
 
 class AnsiTrackerTest extends Base
 {

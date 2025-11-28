@@ -13,11 +13,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Prompts\Concerns\Colors;
 use Laravel\Prompts\Themes\Default\Concerns\InteractsWithStrings;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Hotkeys\Hotkey;
 use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\BaseConverter;
-use SoloTerm\Solo\Support\Screen;
 
 class EnhancedTailCommand extends Command
 {
@@ -37,6 +37,16 @@ class EnhancedTailCommand extends Command
 
     protected string $invisibleWrapMark;
 
+    /**
+     * Cached base path for log line formatting.
+     */
+    protected string $cachedBasePath;
+
+    /**
+     * Cached theme instance for performance.
+     */
+    protected $cachedTheme;
+
     public static function file($path)
     {
         return static::make('Logs', "tail -f -n 100 $path")->setFile($path);
@@ -53,8 +63,15 @@ class EnhancedTailCommand extends Command
     {
         $this->touchFile();
 
-        $this->invisibleVendorMark = Solo::theme()->invisible('V');
-        $this->invisibleWrapMark = Solo::theme()->invisible('W');
+        // Cache theme to avoid repeated facade lookups
+        $this->cachedTheme = Solo::theme();
+        $this->invisibleVendorMark = $this->cachedTheme->invisible('V');
+        $this->invisibleWrapMark = $this->cachedTheme->invisible('W');
+
+        // Cache base path to avoid repeated function_exists checks
+        $this->cachedBasePath = function_exists('Orchestra\Testbench\package_path')
+            ? \Orchestra\Testbench\package_path()
+            : base_path();
     }
 
     /**
@@ -87,12 +104,8 @@ class EnhancedTailCommand extends Command
             return;
         }
 
-        // Opening in write mode truncates (or creates.)
-        $handle = fopen($this->file, 'w');
-
-        if ($handle !== false) {
-            fclose($handle);
-        }
+        // Truncate file atomically without manual resource management.
+        file_put_contents($this->file, '');
 
         // Clear the logs held in memory.
         $this->clear();
@@ -117,10 +130,11 @@ class EnhancedTailCommand extends Command
         $cursor = $this->scrollIndex;
         $this->pendingScrollIndex = $this->scrollIndex;
 
+        // Pattern for finding invisible compressed line counts - calculate once outside loop
+        $pattern = str($this->dim(' ...') . $this->cachedTheme->invisible('XXX'))->before('XXX')->value();
+
         while ($cursor >= 0) {
             $line = $lines->get($cursor - 1);
-
-            $pattern = str($this->dim(' ...') . Solo::theme()->invisible('XXX'))->before('XXX')->value();
 
             // Invisible compressed line count.
             if (Str::contains($line, $pattern)) {
@@ -132,7 +146,6 @@ class EnhancedTailCommand extends Command
 
             $cursor--;
         }
-
     }
 
     protected function prepareToDisableWrapping()
@@ -161,7 +174,7 @@ class EnhancedTailCommand extends Command
 
         if (!$this->wrapLines && count($wrapped) > 1 && !$recursive) {
             $width += 2;
-            $remainder = $this->dim(' ...') . Solo::theme()->invisible(BaseConverter::toString(count($wrapped) - 1));
+            $remainder = $this->dim(' ...') . $this->cachedTheme->invisible(BaseConverter::toString(count($wrapped) - 1));
             $len = AnsiAware::mb_strlen($remainder);
 
             $wrapped = parent::wrapLine($wrapped[0], (int) $width - $len, $continuationIndent);
@@ -275,45 +288,50 @@ class EnhancedTailCommand extends Command
 
     protected function collapseVendorFrames(Collection $lines)
     {
-        $hasVendorFrame = false;
+        // We want to keep the *last* vendor frame in each consecutive chunk,
+        // because that line holds the cumulative compressed lines number.
+        // This single-pass approach avoids the O(2n) double-reverse.
+        $items = $lines->values()->all();
+        $keep = [];
+        $lastVendorIndex = null;
 
-        return $lines
-            // We reverse because we want to keep the *last* vendor frame,
-            // because that line holds the cumulative compressed lines
-            // number. If we kept the first vendor frame our scroll
-            // index wouldn't work when toggling.
-            ->reverse()
-            ->filter(function ($line) use (&$hasVendorFrame, &$remainingVendorLines) {
-                $isVendorFrame = $this->isVendorFrame($line);
+        foreach ($items as $i => $line) {
+            $isVendor = $this->isVendorFrame($line);
 
-                if ($isVendorFrame) {
-                    // Skip the line if a vendor frame has already been added.
-                    if ($hasVendorFrame) {
-                        return false;
-                    }
-                    // Otherwise, mark that a vendor frame has been added.
-                    $hasVendorFrame = true;
-                } else {
-                    // Reset the flag if the current line is not a vendor frame.
-                    $hasVendorFrame = false;
+            if ($isVendor) {
+                // Track the last vendor frame in this chunk
+                $lastVendorIndex = $i;
+            } else {
+                // Non-vendor line - if we were in a vendor chunk, mark the last vendor to keep
+                if ($lastVendorIndex !== null) {
+                    $keep[$lastVendorIndex] = true;
+                    $lastVendorIndex = null;
                 }
+                // Always keep non-vendor lines
+                $keep[$i] = true;
+            }
+        }
 
-                return true;
-            })
-            // Put it back in the right orientation.
-            ->reverse();
+        // Handle trailing vendor chunk at end of collection
+        if ($lastVendorIndex !== null) {
+            $keep[$lastVendorIndex] = true;
+        }
+
+        return $lines->filter(fn($_, $k) => isset($keep[$k]));
     }
 
     protected function formatInitialException($line): array
     {
         $lines = explode('{"exception":"[object] ', $line);
+        $theme = $this->cachedTheme;
+
         $message = array_map(
-            fn($line) => Solo::theme()->exception($line),
+            fn($line) => $theme->exception($line),
             $this->wrapLine($lines[0])
         );
 
         $exception = array_map(
-            fn($line) => ' ' . Solo::theme()->exception($line),
+            fn($line) => ' ' . $theme->exception($line),
             $this->wrapLine($lines[1], -1, 1)
         );
 
@@ -325,7 +343,7 @@ class EnhancedTailCommand extends Command
 
     protected function formatLogLine($line): null|array|string
     {
-        $theme = Solo::theme();
+        $theme = $this->cachedTheme;
 
         // 1 space outside of each border.
         $traceBoxWidth = $this->scrollPaneWidth() - 2;
@@ -350,10 +368,8 @@ class EnhancedTailCommand extends Command
             return $this->wrapLine($line);
         }
 
-        $base = function_exists('Orchestra\Testbench\package_path') ? \Orchestra\Testbench\package_path() : base_path();
-
         // Make the line shorter by removing the base path, which helps prevent wrapping.
-        $line = str_replace($base, '', $line);
+        $line = str_replace($this->cachedBasePath, '', $line);
 
         // Stack trace lines start with #\d. Here we pad the numbers 0-9
         // with a preceding zero to keep everything in line visually.
@@ -368,7 +384,7 @@ class EnhancedTailCommand extends Command
             // Add the running total, invisibly, to this line. When we turn vendor
             // frames back on we search through the lines above the current index
             // to figure out how many compressed vendor frames there are.
-            $invisibleCount = Solo::theme()->invisible("[C:$this->compressed]");
+            $invisibleCount = $theme->invisible("[C:$this->compressed]");
 
             // We also add the invisible vendor mark to denote that these
             // are vendor frames, albeit collapsed ones.

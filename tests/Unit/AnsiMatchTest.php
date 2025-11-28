@@ -11,7 +11,7 @@ namespace SoloTerm\Solo\Tests\Unit;
 
 use Illuminate\Support\Arr;
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Support\AnsiMatcher;
+use SoloTerm\Screen\AnsiMatcher;
 
 class AnsiMatchTest extends Base
 {

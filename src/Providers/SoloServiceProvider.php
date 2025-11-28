@@ -46,10 +46,14 @@ class SoloServiceProvider extends ServiceProvider
             Make::class,
         ]);
 
-        if (class_exists('\SoloTerm\Solo\Console\Commands\Test')) {
-            $this->commands([
-                '\SoloTerm\Solo\Console\Commands\Test',
-            ]);
+        // Development-only commands (excluded via .gitattributes)
+        foreach ([
+            '\SoloTerm\Solo\Console\Commands\Test',
+            '\SoloTerm\Solo\Console\Commands\Local',
+        ] as $devCommand) {
+            if (class_exists($devCommand)) {
+                $this->commands([$devCommand]);
+            }
         }
     }
 
