@@ -62,10 +62,11 @@ class Local extends Command
             $composer['repositories'] = [];
         }
 
-        // Check if path repository already exists
+        // Check if path repository already exists (normalize trailing slashes)
         $hasPathRepo = false;
+        $normalizedPath = rtrim($path, '/');
         foreach ($composer['repositories'] as $repo) {
-            if (isset($repo['type']) && $repo['type'] === 'path' && isset($repo['url']) && $repo['url'] === $path) {
+            if (isset($repo['type']) && $repo['type'] === 'path' && isset($repo['url']) && rtrim($repo['url'], '/') === $normalizedPath) {
                 $hasPathRepo = true;
                 break;
             }
@@ -83,9 +84,10 @@ class Local extends Command
         }
 
         // Update screen dependency to @dev
-        if (isset($composer['require']['soloterm/screen'])) {
-            $composer['require']['soloterm/screen'] = '@dev';
+        if (!isset($composer['require']['soloterm/screen'])) {
+            $this->warn('soloterm/screen not found in require section. Adding it now.');
         }
+        $composer['require']['soloterm/screen'] = '@dev';
 
         // Write back
         if (!$this->writeComposer($composer, $composerPath)) {
@@ -111,8 +113,13 @@ class Local extends Command
                     return true;
                 }
 
-                // Remove if it looks like a screen path
-                return !isset($repo['url']) || !str_contains($repo['url'], 'screen');
+                // Remove only if the path ends with 'screen' or 'screen/'
+                if (!isset($repo['url'])) {
+                    return true;
+                }
+                $normalizedUrl = rtrim($repo['url'], '/');
+
+                return !str_ends_with($normalizedUrl, 'screen');
             }));
 
             // Remove empty repositories array
