@@ -2,6 +2,9 @@
     "name": "soloterm/solo",
     "description": "A Laravel package to run multiple commands at once, to aid in local development.",
     "type": "library",
+    "keywords": [
+        "dev"
+    ],
     "license": "MIT",
     "authors": [
         {
