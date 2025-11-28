@@ -71,7 +71,7 @@ class DiffRenderer
     /**
      * Render a Screen, returning only the differences from the previous frame.
      *
-     * @param Screen $screen The screen to render
+     * @param  Screen  $screen  The screen to render
      * @return string ANSI output to update the terminal (may be empty if no changes)
      */
     public function render(Screen $screen): string
@@ -82,6 +82,7 @@ class DiffRenderer
         // First frame - need full render
         if ($this->terminalState === null) {
             $this->terminalState = $newState;
+
             // Return full output for first frame
             return "\e[H" . $screen->output();
         }
@@ -121,8 +122,8 @@ class DiffRenderer
      */
     protected function renderDiff(CellBuffer $oldState, CellBuffer $newState): string
     {
-        $cursor = new CursorOptimizer();
-        $style = new StyleTracker();
+        $cursor = new CursorOptimizer;
+        $style = new StyleTracker;
         $parts = [];
 
         for ($row = 0; $row < $this->height; $row++) {

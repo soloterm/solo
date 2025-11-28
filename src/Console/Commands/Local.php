@@ -25,6 +25,7 @@ class Local extends Command
 
         if (!file_exists($composerPath)) {
             $this->error("Could not find composer.json at: {$composerPath}");
+
             return 1;
         }
 
@@ -32,6 +33,7 @@ class Local extends Command
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             $this->error('Failed to parse composer.json: ' . json_last_error_msg());
+
             return 1;
         }
 
@@ -50,7 +52,8 @@ class Local extends Command
         $absolutePath = realpath(dirname($composerPath) . '/' . $path);
         if (!$absolutePath || !is_dir($absolutePath)) {
             $this->error("Local screen package not found at: {$path}");
-            $this->line("Make sure the screen package exists at the specified path relative to composer.json");
+            $this->line('Make sure the screen package exists at the specified path relative to composer.json');
+
             return 1;
         }
 
@@ -107,6 +110,7 @@ class Local extends Command
                 if (!isset($repo['type']) || $repo['type'] !== 'path') {
                     return true;
                 }
+
                 // Remove if it looks like a screen path
                 return !isset($repo['url']) || !str_contains($repo['url'], 'screen');
             }));
@@ -143,6 +147,7 @@ class Local extends Command
 
         if ($json === false) {
             $this->error('Failed to encode composer.json: ' . json_last_error_msg());
+
             return false;
         }
 
@@ -151,6 +156,7 @@ class Local extends Command
 
         if (file_put_contents($composerPath, $json) === false) {
             $this->error('Failed to write composer.json');
+
             return false;
         }
 

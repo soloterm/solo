@@ -16,6 +16,7 @@ use Chewie\Concerns\SetsUpAndResets;
 use Illuminate\Support\Collection;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\Terminal;
+use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Events\Event;
 use SoloTerm\Solo\Facades\Solo;
@@ -25,7 +26,6 @@ use SoloTerm\Solo\Popups\Quitting;
 use SoloTerm\Solo\Support\DiffRenderer;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
-use SoloTerm\Screen\Screen;
 
 class Dashboard extends Prompt
 {
@@ -383,6 +383,7 @@ class Dashboard extends Prompt
     {
         if ($this->currentCommand()->processStopped()) {
             $this->exitInteractiveMode();
+
             return;
         }
 
@@ -394,6 +395,7 @@ class Dashboard extends Prompt
         // Exit interactive mode without stopping the underlying process.
         if ($key === "\x18") {
             $this->exitInteractiveMode();
+
             return;
         }
 

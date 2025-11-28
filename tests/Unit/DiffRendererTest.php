@@ -21,13 +21,13 @@ class DiffRendererTest extends TestCase
     {
         $diffRenderer = new DiffRenderer(80, 24);
         $screen = new Screen(80, 24);
-        $screen->write("Hello World");
+        $screen->write('Hello World');
 
         $output = $diffRenderer->render($screen);
 
         // First frame should contain full output with cursor home
         $this->assertStringContainsString("\e[H", $output);
-        $this->assertStringContainsString("Hello World", $output);
+        $this->assertStringContainsString('Hello World', $output);
     }
 
     #[Test]
@@ -37,12 +37,12 @@ class DiffRendererTest extends TestCase
 
         // First frame
         $screen1 = new Screen(80, 24);
-        $screen1->write("Hello World");
+        $screen1->write('Hello World');
         $diffRenderer->render($screen1);
 
         // Second identical frame
         $screen2 = new Screen(80, 24);
-        $screen2->write("Hello World");
+        $screen2->write('Hello World');
         $output = $diffRenderer->render($screen2);
 
         // Should produce no output since frames are identical
@@ -57,7 +57,7 @@ class DiffRendererTest extends TestCase
         // First frame - fill the whole screen
         $screen1 = new Screen(80, 24);
         for ($row = 0; $row < 24; $row++) {
-            $screen1->write("\e[" . ($row + 1) . ";1H");
+            $screen1->write("\e[" . ($row + 1) . ';1H');
             $screen1->write(str_repeat('X', 80));
         }
         $diffRenderer->render($screen1);
@@ -65,7 +65,7 @@ class DiffRendererTest extends TestCase
         // Second frame with a few changes
         $screen2 = new Screen(80, 24);
         for ($row = 0; $row < 24; $row++) {
-            $screen2->write("\e[" . ($row + 1) . ";1H");
+            $screen2->write("\e[" . ($row + 1) . ';1H');
             $line = str_repeat('X', 80);
             if ($row === 5) {
                 $line = 'CHANGED!' . substr($line, 8);
@@ -87,7 +87,7 @@ class DiffRendererTest extends TestCase
 
         // First frame
         $screen1 = new Screen(80, 24);
-        $screen1->write("Hello");
+        $screen1->write('Hello');
         $diffRenderer->render($screen1);
 
         $this->assertTrue($diffRenderer->hasState());
@@ -105,7 +105,7 @@ class DiffRendererTest extends TestCase
 
         // First frame
         $screen = new Screen(80, 24);
-        $screen->write("Hello");
+        $screen->write('Hello');
         $diffRenderer->render($screen);
 
         $this->assertTrue($diffRenderer->hasState());
@@ -127,7 +127,7 @@ class DiffRendererTest extends TestCase
         // First frame - full render
         $screen1 = new Screen($width, $height);
         for ($row = 0; $row < $height; $row++) {
-            $screen1->write("\e[" . ($row + 1) . ";1H");
+            $screen1->write("\e[" . ($row + 1) . ';1H');
             $screen1->write(str_repeat('X', $width));
         }
         $diffRenderer->render($screen1);
@@ -139,7 +139,7 @@ class DiffRendererTest extends TestCase
         for ($i = 0; $i < $iterations; $i++) {
             $screen = new Screen($width, $height);
             for ($row = 0; $row < $height; $row++) {
-                $screen->write("\e[" . ($row + 1) . ";1H");
+                $screen->write("\e[" . ($row + 1) . ';1H');
                 // Change a few cells each frame
                 $line = str_repeat('X', $width);
                 if ($row === ($i % $height)) {
@@ -175,7 +175,7 @@ class DiffRendererTest extends TestCase
         // First frame - full content
         $screen1 = new Screen($width, $height);
         for ($row = 0; $row < $height; $row++) {
-            $screen1->write("\e[" . ($row + 1) . ";1H");
+            $screen1->write("\e[" . ($row + 1) . ';1H');
             $screen1->write(str_repeat('A', $width));
         }
         $diffRenderer->render($screen1);
@@ -187,7 +187,7 @@ class DiffRendererTest extends TestCase
         for ($i = 0; $i < $iterations; $i++) {
             $screen = new Screen($width, $height);
             for ($row = 0; $row < $height; $row++) {
-                $screen->write("\e[" . ($row + 1) . ";1H");
+                $screen->write("\e[" . ($row + 1) . ';1H');
                 // Only change cell at row 5, col 5
                 if ($row === 5) {
                     $screen->write(str_repeat('A', 5) . 'B' . str_repeat('A', $width - 6));
@@ -212,7 +212,7 @@ class DiffRendererTest extends TestCase
         for ($i = 0; $i < $iterations; $i++) {
             $screen = new Screen($width, $height);
             for ($row = 0; $row < $height; $row++) {
-                $screen->write("\e[" . ($row + 1) . ";1H");
+                $screen->write("\e[" . ($row + 1) . ';1H');
                 // Change every cell
                 $screen->write(str_repeat('B', $width));
             }
@@ -223,9 +223,9 @@ class DiffRendererTest extends TestCase
         $allCellsTime = (microtime(true) - $start) * 1000;
 
         echo "\n\nCell Comparison Benchmark ({$iterations} iterations, {$width}x{$height}):\n";
-        echo "  1 cell changed:   " . round($singleCellTime, 2) . " ms, " . $singleCellBytes . " bytes\n";
-        echo "  All cells changed: " . round($allCellsTime, 2) . " ms, " . $allCellsBytes . " bytes\n";
-        echo "  Output ratio:     " . round($allCellsBytes / max($singleCellBytes, 1), 1) . "x more bytes\n";
+        echo '  1 cell changed:   ' . round($singleCellTime, 2) . ' ms, ' . $singleCellBytes . " bytes\n";
+        echo '  All cells changed: ' . round($allCellsTime, 2) . ' ms, ' . $allCellsBytes . " bytes\n";
+        echo '  Output ratio:     ' . round($allCellsBytes / max($singleCellBytes, 1), 1) . "x more bytes\n";
 
         // Output should be proportional to changes - 1 cell should output much less
         $this->assertLessThan($allCellsBytes, $singleCellBytes);
