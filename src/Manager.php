@@ -128,7 +128,7 @@ class Manager
             "\n" .
             "Or add ->withEnv(['APP_ENV' => 'testing']) to your command.\n" .
             "\n" .
-            "See: https://github.com/soloterm/solo/issues/97"
+            'See: https://github.com/soloterm/solo/issues/97'
         );
     }
 
