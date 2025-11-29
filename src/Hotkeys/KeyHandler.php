@@ -37,6 +37,8 @@ enum KeyHandler
     case Restart;
     case PreviousTab;
     case NextTab;
+    case HeadTab;
+    case TailTab;
     case Interactive;
 
     // Application
@@ -59,6 +61,8 @@ enum KeyHandler
             self::Quit => fn(Dashboard $prompt) => $prompt->quit(),
             self::PreviousTab => fn(Dashboard $prompt) => $prompt->previousTab(),
             self::NextTab => fn(Dashboard $prompt) => $prompt->nextTab(),
+            self::HeadTab => fn(Dashboard $prompt) => $prompt->headTab(),
+            self::TailTab => fn(Dashboard $prompt) => $prompt->tailTab(),
             self::ScrollUp => fn(Command $command) => $command->scrollUp(),
             self::ScrollDown => fn(Command $command) => $command->scrollDown(),
             self::PageUp => fn(Command $command) => $command->pageUp(),

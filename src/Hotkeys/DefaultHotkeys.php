@@ -66,6 +66,16 @@ class DefaultHotkeys implements HotkeyProvider
                 ->label('Next')
                 ->invisible(),
 
+            // CTRL + LEFT_ARROW
+            'head_tab' => Hotkey::make("\e[1;5D", KeyHandler::HeadTab)
+                ->label('Head')
+                ->invisible(),
+
+            // CTRL + RIGHT_ARROW
+            'tail_tab' => Hotkey::make("\e[1;5C", KeyHandler::TailTab)
+                ->label('Tail')
+                ->invisible(),
+
             // This is a no-op, display only key. The real scroll handlers are
             // right below, but they're invisible. We do this to save space.
             'scroll' => Hotkey::make()
