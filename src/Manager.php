@@ -16,6 +16,7 @@ use InvalidArgumentException;
 use Laravel\Prompts\Themes\Default\Renderer as PromptsRenderer;
 use ReflectionClass;
 use SoloTerm\Solo\Commands\Command;
+use SoloTerm\Solo\Commands\TestCommand;
 use SoloTerm\Solo\Concerns\HasEvents;
 use SoloTerm\Solo\Contracts\HotkeyProvider;
 use SoloTerm\Solo\Contracts\Theme;
@@ -74,6 +75,8 @@ class Manager
             );
         }
 
+        $this->blockIfUnsafeTestCommand($command);
+
         $this->commands[] = $command;
 
         return $this;
@@ -84,6 +87,49 @@ class Manager
         $this->commands = [];
 
         return $this;
+    }
+
+    /**
+     * Block unsafe test commands that might wipe local databases.
+     *
+     * Test commands run without APP_ENV=testing can accidentally destroy local data.
+     * This method blocks such commands and displays a warning in the panel.
+     *
+     * @see https://github.com/soloterm/solo/issues/97
+     */
+    protected function blockIfUnsafeTestCommand(Command $command): void
+    {
+        // If it's already a TestCommand, APP_ENV=testing is set automatically.
+        if ($command instanceof TestCommand) {
+            return;
+        }
+
+        // If APP_ENV is already set to testing, the user knows what they're doing.
+        if (($command->getEnvironment()['APP_ENV'] ?? null) === 'testing') {
+            return;
+        }
+
+        // Check if this looks like a test command.
+        if (!$command->command || !TestCommand::looksLikeTestCommand($command->command)) {
+            return;
+        }
+
+        $command->block(
+            "This test command may wipe your local database!\n" .
+            "\n" .
+            "Tests should run with APP_ENV=testing to use the test\n" .
+            "database instead of your local development database.\n" .
+            "\n" .
+            "To fix this, update your config/solo.php to use:\n" .
+            "\n" .
+            "  'Tests' => TestCommand::artisan(),\n" .
+            "  'Tests' => TestCommand::pest(),\n" .
+            "  'Tests' => TestCommand::phpunit(),\n" .
+            "\n" .
+            "Or add ->withEnv(['APP_ENV' => 'testing']) to your command.\n" .
+            "\n" .
+            'See: https://github.com/soloterm/solo/issues/97'
+        );
     }
 
     public function loadCommands(): static

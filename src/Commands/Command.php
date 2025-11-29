@@ -37,6 +37,10 @@ class Command implements Loopable
 
     public bool $interactive = false;
 
+    protected bool $blocked = false;
+
+    protected ?string $blockedReason = null;
+
     public int $scrollIndex = 0;
 
     public SplQueue $lines;
@@ -139,6 +143,25 @@ class Command implements Loopable
         $this->autostart = false;
 
         return $this;
+    }
+
+    public function block(string $reason): static
+    {
+        $this->blocked = true;
+        $this->blockedReason = $reason;
+        $this->autostart = false;
+
+        return $this;
+    }
+
+    public function isBlocked(): bool
+    {
+        return $this->blocked;
+    }
+
+    public function getBlockedReason(): ?string
+    {
+        return $this->blockedReason;
     }
 
     public function interactive(): static
