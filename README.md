@@ -214,10 +214,8 @@ I wouldn't! Use supervisor or similar tools for production environments.
 
 This is free! If you want to support me:
 
-- Sponsor my open source work: [aaronfrancis.com/backstage](https://aaronfrancis.com/backstage)
 - Check out my courses:
-    - [Mastering Postgres](https://masteringpostgres.com)
-    - [High Performance SQLite](https://highperformancesqlite.com)
+    - [Database School](https://databaseschool.com)
     - [Screencasting](https://screencasting.com)
 - Help spread the word about things I make
 
