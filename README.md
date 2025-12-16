@@ -220,3 +220,13 @@ Special thanks to:
 - Joe's [Chewie package](https://github.com/joetannenbaum/chewie)
 - [Laravel Prompts](https://laravel.com/docs/11.x/prompts)
 - [Will King](https://x.com/wking__) for the Solo logo
+
+## Related Projects
+
+- [Screen](https://github.com/soloterm/screen) - Pure PHP terminal renderer
+- [Dumps](https://github.com/soloterm/dumps) - Laravel command to intercept dumps
+- [Grapheme](https://github.com/soloterm/grapheme) - Unicode grapheme width calculator
+- [Notify](https://github.com/soloterm/notify) - PHP package for desktop notifications via OSC escape sequences
+- [Notify Laravel](https://github.com/soloterm/notify-laravel) - Laravel integration for soloterm/notify
+- [TNotify](https://github.com/soloterm/tnotify) - Standalone, cross-platform CLI for desktop notifications
+- [VTail](https://github.com/soloterm/vtail) - Vendor-aware tail for Laravel logs
