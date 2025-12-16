@@ -1,0 +1,14 @@
+{
+    "title": "Solo",
+    "description": "Run multiple Laravel dev commands in a unified tabbed terminal interface",
+    "pages": [
+        { "slug": "index", "title": "Introduction" },
+        { "slug": "installation", "title": "Installation" },
+        { "slug": "configuration", "title": "Configuration" },
+        { "slug": "commands", "title": "Commands" },
+        { "slug": "keybindings", "title": "Keybindings" },
+        { "slug": "themes", "title": "Themes" },
+        { "slug": "built-in", "title": "Built-in Commands" },
+        { "slug": "architecture", "title": "Architecture" }
+    ]
+}
