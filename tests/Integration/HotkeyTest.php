@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Tests\Integration;
 
 use Laravel\Prompts\Key;
 use PHPUnit\Framework\Attributes\Test;
-use SoloTerm\Solo\Commands\EnhancedTailCommand;
 
 class HotkeyTest extends Base
 {
@@ -40,25 +39,26 @@ class HotkeyTest extends Base
     }
 
     #[Test]
-    public function hotkeys_are_bound_to_commands()
+    public function tab_navigation_with_arrow_keys()
     {
         $actions = [
-            Key::RIGHT_ARROW,
             function (string $ansi, string $plain) {
-                $this->assertStringContainsString('Hide vendor', $plain);
+                $this->assertStringContainsString('About', $plain);
             },
             Key::RIGHT_ARROW,
-            'v',
-            Key::RIGHT_ARROW,
             function (string $ansi, string $plain) {
-                $this->assertStringContainsString('Hide vendor', $plain);
+                $this->assertStringContainsString('Logs', $plain);
+            },
+            Key::LEFT_ARROW,
+            function (string $ansi, string $plain) {
+                $this->assertStringContainsString('About', $plain);
             },
         ];
 
         $this->runSolo($actions, function () {
             config()->set('solo.commands', [
                 'About' => 'php artisan solo:about',
-                'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log'))
+                'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log')
             ]);
         });
     }

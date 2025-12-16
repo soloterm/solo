@@ -726,9 +726,9 @@ TXT;
     }
 
     #[Test]
-    public function enhanced_log_2()
+    public function simple_multiline_rendering()
     {
-        $this->assertTerminalMatch(file_get_contents(package_path('tests/Fixtures/enhance-log-wrap-vendor-test-3.log')));
+        $this->assertTerminalMatch(file_get_contents(package_path('tests/Fixtures/simple-multiline-test.log')));
     }
 
     #[Test]

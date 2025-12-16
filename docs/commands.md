@@ -14,7 +14,7 @@ Commands are defined in the `commands` array in `config/solo.php`:
 ```php
 'commands' => [
     'About' => 'php artisan solo:about',
-    'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
+    'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log'),
     'Vite' => 'npm run dev',
     'Queue' => Command::from('php artisan queue:work')->lazy(),
 ],
@@ -50,7 +50,6 @@ use SoloTerm\Solo\Commands\Command;
 For full control, create your own command class:
 
 ```php
-'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
 'Make' => new MakeCommand,
 ```
 

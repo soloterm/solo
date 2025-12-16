@@ -13,7 +13,6 @@ Solo is configured through `config/solo.php`. This file is published when you ru
 <?php
 
 use SoloTerm\Solo\Commands\Command;
-use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
 use SoloTerm\Solo\Hotkeys;
 use SoloTerm\Solo\Themes;
@@ -50,7 +49,8 @@ return [
     */
     'commands' => [
         'About' => 'php artisan solo:about',
-        'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
+        // For enhanced log viewing with vendor frame collapsing, see soloterm/vtail
+        'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log'),
         'Vite' => 'npm run dev',
         'Make' => new MakeCommand,
 

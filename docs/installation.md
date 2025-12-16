@@ -79,7 +79,7 @@ Out of the box, Solo comes configured with:
 | Tab | Command | Autostart |
 |-----|---------|-----------|
 | About | `php artisan solo:about` | Yes |
-| Logs | Enhanced log tailing | Yes |
+| Logs | Log file tailing | Yes |
 | Vite | `npm run dev` | Yes |
 | Make | Artisan make commands | Yes |
 | Dumps | Dump server | No (lazy) |

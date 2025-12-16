@@ -7,53 +7,6 @@ description: Special commands included with Solo.
 
 Solo includes several specialized commands that provide enhanced functionality beyond simple command execution.
 
-## EnhancedTailCommand
-
-A smart log viewer with features specifically designed for Laravel log files.
-
-### Usage
-
-```php
-'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
-```
-
-### Features
-
-#### Vendor Frame Collapsing
-
-Stack traces in Laravel logs often include many vendor frames. EnhancedTailCommand collapses these by default, showing only your application's frames.
-
-Press `v` to toggle vendor frame visibility.
-
-#### Line Wrapping
-
-Long log lines can be wrapped for readability.
-
-Press `w` to toggle line wrapping.
-
-#### File Truncation
-
-For large log files, you can truncate the file to start fresh.
-
-Press `t` to truncate the log file.
-
-### Hotkeys
-
-| Key | Action |
-|-----|--------|
-| `v` | Toggle vendor frames |
-| `w` | Toggle line wrapping |
-| `t` | Truncate log file |
-
-### Custom Log Files
-
-Point to any log file:
-
-```php
-'API Logs' => EnhancedTailCommand::file(storage_path('logs/api.log')),
-'Queue Logs' => EnhancedTailCommand::file(storage_path('logs/queue.log')),
-```
-
 ## MakeCommand
 
 A universal entry point to all Laravel `make:*` Artisan commands.
@@ -182,7 +135,7 @@ Shows:
 
 ## Creating Your Own Built-in Commands
 
-Study `EnhancedTailCommand` as an example of what's possible:
+You can create your own custom command classes:
 
 ```php
 <?php
