@@ -57,10 +57,10 @@ Define your commands in the `commands` array:
 ```php
 'commands' => [
     'About' => 'php artisan solo:about',
-    'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
+    'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log'),
     'Vite' => 'npm run dev',
     'Make' => new MakeCommand,
-    
+
     // Lazy commands don't start automatically
     'Dumps' => Command::from('php artisan solo:dumps')->lazy(),
     'Queue' => Command::from('php artisan queue:work')->lazy(),
@@ -74,17 +74,16 @@ You can define commands in several ways:
 'commands' => [
     // A simple string
     'About' => 'php artisan solo:about',
-    
+
     // A custom Command class
-    'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
     'Make' => new MakeCommand,
-    
+
     // Using the Command::from() static constructor
     'Dumps' => Command::from('php artisan solo:dumps')->lazy(),
 ],
 ```
 
-A simple string command is the easiest way, but if you need more control you're free to create your own custom class. The `EnhancedTailCommand` is a good example of what you can do in a custom command.
+A simple string command is the easiest way, but if you need more control you're free to create your own custom class.
 
 #### Lazy Commands
 
@@ -158,19 +157,6 @@ php artisan solo
     - <kbd>q</kbd> or <kbd>Ctrl</kbd>+<kbd>C</kbd> to quit Solo
 
 ## Special Commands
-
-### EnhancedTailCommand
-
-The `EnhancedTailCommand` provides improved log viewing with features like:
-
-- Vendor frame collapsing
-- Stack trace formatting
-- Toggle vendor frames with <kbd>v</kbd>
-- File truncating
-
-```php
-'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
-```
 
 ### MakeCommand
 

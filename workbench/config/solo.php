@@ -8,7 +8,6 @@
  */
 
 use SoloTerm\Solo\Commands\Command;
-use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
 
 return [
@@ -16,7 +15,8 @@ return [
 
     'commands' => [
         'About' => 'php artisan solo:about',
-        'Logs' => EnhancedTailCommand::file(storage_path('logs/laravel.log')),
+        // For enhanced log viewing with vendor frame collapsing, see soloterm/vtail
+        'Logs' => 'tail -f -n 100 ' . storage_path('logs/laravel.log'),
         'Vite' => 'npm run dev',
         'Make' => new MakeCommand,
         // 'HTTP' => 'php artisan serve',

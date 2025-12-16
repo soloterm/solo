@@ -108,11 +108,6 @@ Prompt\Dashboard (extends Laravel Prompt)
 - Hotkeys are dynamically bound based on current tab and command state
 - Each Command can define custom hotkeys() method for command-specific keys
 
-**EnhancedTailCommand** (`src/Commands/EnhancedTailCommand.php`)
-- Specialized Command for log tailing with vendor frame collapsing
-- Custom hotkeys: 'v' (toggle vendor), 'w' (wrap lines), 't' (truncate file)
-- Overrides modifyWrappedLines() to add special formatting
-
 ### Process Wrapping Strategy
 
 Solo wraps user commands in GNU Screen to solve PTY and ANSI rendering challenges:
@@ -208,6 +203,6 @@ Manager uses HasEvents trait for internal events:
 ## Testing Strategy
 
 - **Unit tests** focus on isolated components (ANSI parsing, wrapping, byte handling)
-- **Integration tests** test full command behavior (EnhancedTailCommand)
+- **Integration tests** test full command behavior
 - Tests use Orchestra Testbench to simulate Laravel environment
 - Many tests verify complex ANSI code handling and multibyte character support

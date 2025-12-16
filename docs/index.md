@@ -66,14 +66,6 @@ Press `s` to start lazy commands when you need them.
 
 Need to type into a command? Press `i` to enter interactive mode, then `Ctrl+X` to exit. Perfect for commands that require input.
 
-### Log Enhancement
-
-The built-in `EnhancedTailCommand` provides smart log viewing:
-
-- Collapsible vendor frames
-- Stack trace formatting
-- File truncation
-
 ### Dump Server
 
 Intercepts `dump()` calls from your application and displays them in Solo instead of polluting your browser or API responses.
