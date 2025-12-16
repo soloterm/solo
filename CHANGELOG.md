@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Removed `EnhancedTailCommand` - it has been extracted to the standalone `soloterm/vtail` package. The default Logs command now uses a simple `tail -f` command.
+
 ## [0.3.0]
 
 ### Breaking Changes
