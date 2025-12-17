@@ -32,6 +32,8 @@ class VimHotkeys extends DefaultHotkeys
 
         $map['previous_tab']->remap('h');
         $map['next_tab']->remap('l');
+        $map['head_tab']->remap('^');
+        $map['tail_tab']->remap('$');
         $map['scroll_up']->remap('k');
         $map['scroll_down']->remap('j');
         $map['page_up']->remap(Key::CTRL_U);
