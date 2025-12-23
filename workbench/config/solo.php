@@ -10,6 +10,7 @@
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Commands\EnhancedTailCommand;
 use SoloTerm\Solo\Commands\MakeCommand;
+use SoloTerm\Solo\Commands\TestCommand;
 
 return [
     'theme' => 'light',
@@ -26,7 +27,7 @@ return [
         'Reverb' => Command::from('php artisan reverb')->lazy(),
         'Pint' => Command::from('./vendor/bin/pint --ansi')->lazy(),
         'Queue' => Command::from('php artisan queue:work')->lazy(),
-        'Tests' => Command::from('php artisan test --colors=always')->lazy(),
+        'Tests' => TestCommand::artisan(),
     ],
 
 ];
