@@ -298,10 +298,9 @@ class Renderer extends PromptsRenderer
 
         // Replace all content with spaces. We add the content
         // into the pane separately in the __invoke method.
-        $visible = [];
-        foreach ($visibleContent as $line) {
-            $visible[] = str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8'));
-        }
+        $visible = collect($visibleContent)
+            ->map(fn(string $line) => str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8')))
+            ->values();
 
         $totalLines = $wrappedLines->count();
 
@@ -319,7 +318,9 @@ class Renderer extends PromptsRenderer
         // If this conditional is true then it means that there wasn't
         // enough content to scroll, so we have to pretend by padding.
         if ($scrolled === $visible) {
-            $scrolled = $this->padScrolledContent($scrolled, $allowedLines);
+            $scrolled = collect($this->padScrolledContent($scrolled->all(), $allowedLines));
+        } elseif (is_array($scrolled)) {
+            $scrolled = collect($scrolled);
         }
 
         foreach ($scrolled as $line) {
