@@ -9,8 +9,8 @@
 
 namespace SoloTerm\Solo\Support;
 
+use SoloTerm\Grapheme\Grapheme;
 use SoloTerm\Screen\Buffers\CellBuffer;
-use SoloTerm\Screen\Cell;
 use SoloTerm\Screen\Output\CursorOptimizer;
 use SoloTerm\Screen\Output\StyleTracker;
 use SoloTerm\Screen\Screen;
@@ -42,6 +42,16 @@ class DiffRenderer
     protected int $height;
 
     /**
+     * Cursor optimizer reused across frames to avoid repeated allocations.
+     */
+    protected CursorOptimizer $cursorOptimizer;
+
+    /**
+     * Style tracker reused across frames to avoid repeated allocations.
+     */
+    protected StyleTracker $styleTracker;
+
+    /**
      * Whether to use optimized rendering (cursor/style tracking).
      */
     protected bool $optimized = true;
@@ -50,6 +60,8 @@ class DiffRenderer
     {
         $this->width = $width;
         $this->height = $height;
+        $this->cursorOptimizer = new CursorOptimizer;
+        $this->styleTracker = new StyleTracker;
     }
 
     /**
@@ -131,9 +143,10 @@ class DiffRenderer
      */
     protected function renderDiff(CellBuffer $oldState, CellBuffer $newState): string
     {
-        $cursor = new CursorOptimizer;
-        $style = new StyleTracker;
-        $parts = [];
+        $this->cursorOptimizer->reset();
+        $this->styleTracker->reset();
+
+        $output = '';
 
         for ($row = 0; $row < $this->height; $row++) {
             if ($oldState->rowEquals($row, $newState)) {
@@ -155,22 +168,22 @@ class DiffRenderer
                 }
 
                 // Get optimized cursor movement
-                $parts[] = $cursor->moveTo($row, $col);
+                $output .= $this->cursorOptimizer->moveTo($row, $col);
 
                 // Get optimized style transition
-                $parts[] = $style->transitionTo($newCell);
+                $output .= $this->styleTracker->transitionTo($newCell);
 
                 // Output the character
-                $parts[] = $newCell->char;
+                $output .= $newCell->char;
 
                 // Track cursor position after character
-                $cursor->advance(1);
+                $this->cursorOptimizer->advance(max(0, Grapheme::wcwidth($newCell->char)));
             }
         }
 
         // Reset styles at the end if needed
-        $parts[] = $style->resetIfNeeded();
+        $output .= $this->styleTracker->resetIfNeeded();
 
-        return implode('', $parts);
+        return $output;
     }
 }

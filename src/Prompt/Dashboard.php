@@ -56,6 +56,16 @@ class Dashboard extends Prompt
     protected ?DiffRenderer $diffRenderer = null;
 
     /**
+     * Cached renderer instance reused across frames.
+     */
+    protected ?object $rendererInstance = null;
+
+    /**
+     * Renderer class backing the cached instance.
+     */
+    protected ?string $rendererClass = null;
+
+    /**
      * Last resize timestamp for debouncing (in microseconds).
      */
     protected ?float $lastResizeTime = null;
@@ -427,8 +437,7 @@ class Dashboard extends Prompt
     protected function render(): void
     {
         // Generate the frame using the standard renderer
-        $renderer = Solo::getRenderer();
-        $renderedFrame = (new $renderer($this))($this);
+        $renderedFrame = ($this->resolveRendererInstance())($this);
 
         if (is_object($renderedFrame) && $this->renderDiffFrame($renderedFrame)) {
             return;
@@ -443,6 +452,18 @@ class Dashboard extends Prompt
 
             $this->prevFrame = $frame;
         }
+    }
+
+    protected function resolveRendererInstance(): object
+    {
+        $rendererClass = Solo::getRenderer();
+
+        if ($this->rendererInstance === null || $this->rendererClass !== $rendererClass) {
+            $this->rendererClass = $rendererClass;
+            $this->rendererInstance = new $rendererClass($this);
+        }
+
+        return $this->rendererInstance;
     }
 
     protected function renderDiffFrame(object $rendererInstance): bool

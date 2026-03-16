@@ -3,6 +3,7 @@
 namespace SoloTerm\Solo\Tests\Unit;
 
 use Laravel\Prompts\Output\BufferedConsoleOutput;
+use Laravel\Prompts\Prompt;
 use PHPUnit\Framework\Attributes\Test;
 use ReflectionProperty;
 use RuntimeException;
@@ -43,6 +44,24 @@ class DashboardRenderTest extends Base
         $dashboard->renderForTest();
 
         $this->assertStringContainsString('FULL FRAME', $output->content());
+    }
+
+    #[Test]
+    public function dashboard_reuses_the_same_renderer_instance_across_frames(): void
+    {
+        CachedRenderer::resetStats();
+
+        Dashboard::setOutput(new BufferedConsoleOutput);
+        Solo::setRenderer(CachedRenderer::class);
+
+        $dashboard = new DashboardHarness;
+        $dashboard->height = 4;
+
+        $dashboard->renderForTest();
+        $dashboard->renderForTest();
+
+        $this->assertSame(1, CachedRenderer::$instances);
+        $this->assertSame(2, CachedRenderer::$invocations);
     }
 }
 
@@ -101,5 +120,32 @@ class StubDiffRenderer extends DiffRenderer
     public function render(Screen $screen): string
     {
         return $this->renderedOutput;
+    }
+}
+
+class CachedRenderer extends Renderer
+{
+    public static int $instances = 0;
+
+    public static int $invocations = 0;
+
+    public function __construct(Prompt $prompt)
+    {
+        parent::__construct($prompt);
+
+        self::$instances++;
+    }
+
+    public static function resetStats(): void
+    {
+        self::$instances = 0;
+        self::$invocations = 0;
+    }
+
+    public function __invoke(Dashboard $dashboard): string
+    {
+        self::$invocations++;
+
+        return 'FULL FRAME';
     }
 }

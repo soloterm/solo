@@ -14,8 +14,9 @@ Manages differential rendering between frames using the Screen package's CellBuf
 
 **Features:**
 - Maintains terminal state using CellBuffer with double-buffering
-- Compares frames cell-by-cell for value-based diffing
-- Uses optimized cursor movement and style tracking
+- Uses row-level equality checks to skip unchanged rows before cell-by-cell comparison
+- Reuses cursor/style optimizer instances across frames to reduce allocations
+- Uses optimized cursor movement and style tracking (including wide-character cursor advance)
 - Automatically handles terminal resize (invalidates state)
 
 **Key Methods:**
@@ -30,11 +31,14 @@ Manages differential rendering between frames using the Screen package's CellBuf
 **Renderer (`src/Prompt/Renderer.php`):**
 - Added `$screen` property to store the Screen instance
 - Added `getScreen()` method to expose Screen for differential rendering
+- Added hot-path caches (box glyph parsing + marquee frame offsets)
+- Reduced per-line object churn in content-pane rendering
 
 **Dashboard (`src/Prompt/Dashboard.php`):**
 - Added `$diffRenderer` property initialized with terminal dimensions
 - Updated `handleResize()` to update DiffRenderer dimensions
 - Updated `render()` to use differential rendering with fallback
+- Reuses renderer instances across frames instead of instantiating every tick
 
 ## How It Works
 
@@ -79,7 +83,8 @@ php artisan solo:local --revert
 
 ## Test Coverage
 
-- `tests/Unit/DiffRendererTest.php` - 6 tests covering differential rendering
+- `tests/Unit/DiffRendererTest.php` - Differential rendering behavior, resize/invalidations, and changed-row comparisons
+- `tests/Unit/DashboardRenderTest.php` - Diff-path fallback behavior plus renderer-instance reuse behavior
 
 Run tests:
 ```bash

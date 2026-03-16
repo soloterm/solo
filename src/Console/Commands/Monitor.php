@@ -36,28 +36,40 @@ class Monitor extends Command
 
     public function handle()
     {
-        $parent = $this->argument('pid');
+        $parent = (int) $this->argument('pid');
+
+        if ($parent <= 0) {
+            $this->error('Invalid PID provided to monitor command.');
+
+            return self::FAILURE;
+        }
+
+        /** @var array<int, true> $children */
         $children = [];
         $lastCullTime = time();
 
         $this->info("Monitoring parent process PID: {$parent}");
 
         while (true) {
+            $processes = ProcessTracker::getProcessList();
+
             // Discover new children
-            $newChildren = ProcessTracker::children($parent);
-            $children = array_unique([...$children, ...$newChildren]);
+            $newChildren = ProcessTracker::children($parent, $processes);
+
+            foreach ($newChildren as $childPid) {
+                $children[(int) $childPid] = true;
+            }
 
             // Time-based culling (more reliable than second % 10)
             $now = time();
             if (($now - $lastCullTime) >= static::CULL_INTERVAL_S) {
-                $children = ProcessTracker::running($children);
+                $children = array_fill_keys(ProcessTracker::running(array_keys($children)), true);
                 $lastCullTime = $now;
             }
 
-            // Shorter sleep for more responsive detection
-            usleep(static::POLL_INTERVAL_US);
-
-            if (ProcessTracker::isRunning($parent)) {
+            if (ProcessTracker::isRunning($parent, $processes)) {
+                // Short sleep while parent is still alive for responsive detection.
+                usleep(static::POLL_INTERVAL_US);
                 continue;
             }
 
@@ -67,20 +79,25 @@ class Monitor extends Command
             usleep(static::GRACE_PERIOD_US);
 
             // Final child enumeration to catch any last spawns
-            $finalChildren = ProcessTracker::children($parent);
-            $children = array_unique([...$children, ...$finalChildren]);
+            $finalChildren = ProcessTracker::children($parent, ProcessTracker::getProcessList());
+
+            foreach ($finalChildren as $childPid) {
+                $children[(int) $childPid] = true;
+            }
+
+            $trackedChildren = array_keys($children);
 
             // Don't kill ourselves
-            $children = array_diff($children, [getmypid()]);
+            $trackedChildren = array_values(array_diff($trackedChildren, [getmypid()]));
 
-            if (!empty($children)) {
-                ProcessTracker::kill($children);
-                $this->warn('Killed processes: ' . implode(', ', $children));
+            if (!empty($trackedChildren)) {
+                ProcessTracker::kill($trackedChildren);
+                $this->warn('Killed processes: ' . implode(', ', $trackedChildren));
             }
 
             $this->info('All tracked child processes cleaned up. Exiting.');
 
-            break;
+            return self::SUCCESS;
         }
     }
 }

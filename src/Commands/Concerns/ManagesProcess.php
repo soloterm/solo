@@ -14,10 +14,10 @@ use Illuminate\Process\InvokedProcess;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use ReflectionException;
+use ReflectionProperty;
 use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\ErrorBox;
 use SoloTerm\Solo\Support\PendingProcess;
@@ -52,7 +52,17 @@ trait ManagesProcess
 
     protected string $partialBuffer = '';
 
-    protected $children = [];
+    /**
+     * Tracked child processes keyed by PID with command snapshots.
+     *
+     * @var array<int, string>
+     */
+    protected array $children = [];
+
+    /**
+     * Root process PID associated with the tracked child process map.
+     */
+    protected ?int $childrenProcessPid = null;
 
     protected $environment = [];
 
@@ -76,6 +86,16 @@ trait ManagesProcess
      * Used by Dashboard for adaptive frame rate.
      */
     protected bool $hadOutputThisTick = false;
+
+    /**
+     * Cached reflection property for InvokedProcess::$process.
+     */
+    protected static ?ReflectionProperty $invokedProcessProperty = null;
+
+    /**
+     * Flag to avoid repeated reflection attempts when internals are incompatible.
+     */
+    protected static bool $invokedProcessPropertyUnavailable = false;
 
     public function createPendingProcess(): PendingProcess
     {
@@ -280,6 +300,8 @@ trait ManagesProcess
             return;
         }
 
+        $this->resetProcessTrackingState();
+
         $this->beforeStart();
 
         $this->process = $this->createPendingProcess()->start(null, function ($type, $buffer) {
@@ -310,10 +332,16 @@ trait ManagesProcess
 
         $this->whenStopping();
 
-        if ($this->processRunning()) {
-            $this->stopInitiatedAt ??= Carbon::now();
-            $this->sendTermSignals();
+        if ($this->processStopped()) {
+            // If restart/stop is triggered after the process already exited,
+            // stale children must not leak into the next lifecycle.
+            $this->resetTrackedChildren();
+
+            return;
         }
+
+        $this->stopInitiatedAt ??= Carbon::now();
+        $this->sendTermSignals();
     }
 
     /**
@@ -322,34 +350,58 @@ trait ManagesProcess
      */
     protected function sendTermSignals(): void
     {
-        $pid = $this->process?->id();
+        $pid = (int) ($this->process?->id() ?? 0);
 
-        if (!$pid) {
+        if ($pid <= 0) {
             return;
         }
 
-        // Re-enumerate children to catch any new ones spawned since last check
-        $this->children = array_unique(array_merge(
-            $this->children,
-            ProcessTracker::children($pid)
-        ));
+        if ($this->childrenProcessPid !== $pid) {
+            $this->resetTrackedChildren();
+            $this->childrenProcessPid = $pid;
+        }
 
-        foreach ($this->children as $childPid) {
-            // Get command name, handling potential failures gracefully
-            $command = @shell_exec("ps -o command= -p $childPid 2>/dev/null");
+        $trackedPids = array_keys($this->children);
+        $discoveredPids = ProcessTracker::children($pid);
+        $activePids = ProcessTracker::running([...$trackedPids, ...$discoveredPids]);
 
-            if ($command === null || $command === false) {
-                // Process may have already exited
+        if (empty($activePids)) {
+            $this->resetTrackedChildren();
+
+            return;
+        }
+
+        $commandsByPid = ProcessTracker::commandsByPid($activePids);
+
+        // Keep only tracked PIDs whose command signature still matches.
+        foreach ($this->children as $childPid => $commandSnapshot) {
+            if (($commandsByPid[$childPid] ?? null) !== $commandSnapshot) {
+                unset($this->children[$childPid]);
+            }
+        }
+
+        // Start tracking newly discovered processes with command snapshots.
+        foreach ($commandsByPid as $childPid => $command) {
+            if (!isset($this->children[$childPid])) {
+                $this->children[$childPid] = $command;
+            }
+        }
+
+        if (empty($this->children)) {
+            return;
+        }
+
+        $terminableChildren = [];
+
+        foreach ($this->children as $childPid => $commandSnapshot) {
+            if (ProcessTracker::isScreenCommand($commandSnapshot)) {
                 continue;
             }
 
-            $command = trim($command);
-
-            // Skip the Screen wrapper process itself
-            if (!Str::startsWith($command, 'screen') && !Str::startsWith($command, 'SCREEN')) {
-                posix_kill((int) $childPid, SIGTERM);
-            }
+            $terminableChildren[] = $childPid;
         }
+
+        ProcessTracker::signal($terminableChildren, SIGTERM);
     }
 
     public function restart(): void
@@ -486,20 +538,29 @@ trait ManagesProcess
             return null;
         }
 
+        if (static::$invokedProcessPropertyUnavailable) {
+            return null;
+        }
+
         try {
-            $reflection = new ReflectionClass(InvokedProcess::class);
+            if (static::$invokedProcessProperty === null) {
+                $reflection = new ReflectionClass(InvokedProcess::class);
 
-            if (!$reflection->hasProperty('process')) {
-                Log::warning('Solo: InvokedProcess internal structure may have changed - missing process property');
+                if (!$reflection->hasProperty('process')) {
+                    Log::warning('Solo: InvokedProcess internal structure may have changed - missing process property');
+                    static::$invokedProcessPropertyUnavailable = true;
 
-                return null;
+                    return null;
+                }
+
+                static::$invokedProcessProperty = $reflection->getProperty('process');
             }
 
-            $property = $reflection->getProperty('process');
-            $symfonyProcess = $property->getValue($this->process);
+            $symfonyProcess = static::$invokedProcessProperty->getValue($this->process);
 
             if (!$symfonyProcess instanceof SymfonyProcess) {
                 Log::warning('Solo: InvokedProcess internal structure may have changed - unexpected type');
+                static::$invokedProcessPropertyUnavailable = true;
 
                 return null;
             }
@@ -507,6 +568,7 @@ trait ManagesProcess
             return $callback($symfonyProcess);
         } catch (ReflectionException $e) {
             Log::warning('Solo: Failed to access Symfony process', ['error' => $e->getMessage()]);
+            static::$invokedProcessPropertyUnavailable = true;
 
             return null;
         }
@@ -517,11 +579,14 @@ trait ManagesProcess
         // If we're trying to stop and the process isn't running, then we
         // succeeded. We'll reset some state and call the callbacks.
         if ($this->stopping && $this->processStopped()) {
+            $trackedChildren = $this->children;
+
             $this->stopping = false;
             $this->stopInitiatedAt = null;
             $this->waitingMessageCounter = 0;
 
-            ProcessTracker::kill($this->children);
+            ProcessTracker::killMatchingCommands($trackedChildren);
+            $this->resetProcessTrackingState();
 
             $this->addLine('Stopped.');
 
@@ -554,6 +619,21 @@ trait ManagesProcess
 
             $this->process->signal(SIGKILL);
         }
+    }
+
+    protected function resetProcessTrackingState(): void
+    {
+        $this->resetTrackedChildren();
+        $this->cachedPtyDevice = null;
+        $this->cachedPtyDevicePid = null;
+        $this->partialBuffer = '';
+        $this->hadOutputThisTick = false;
+    }
+
+    protected function resetTrackedChildren(): void
+    {
+        $this->children = [];
+        $this->childrenProcessPid = null;
     }
 
     protected function callAfterTerminateCallbacks()

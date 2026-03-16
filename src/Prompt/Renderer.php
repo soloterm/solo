@@ -38,20 +38,54 @@ class Renderer extends PromptsRenderer
 
     public int $height;
 
-    protected Collection $visibleContent;
+    /**
+     * Content lines rendered inside the scroll pane.
+     *
+     * @var array<int, string>
+     */
+    protected array $visibleContent = [];
 
     /**
      * The Screen instance used for rendering.
      */
     protected ?Screen $screen = null;
 
+    /**
+     * Parsed box-character maps keyed by the source box string.
+     *
+     * @var array<string, array<string, string>>
+     */
+    protected array $boxCache = [];
+
+    /**
+     * Precomputed marquee frame-start positions keyed by "length:width".
+     *
+     * @var array<string, array<int, int>>
+     */
+    protected array $marqueeStartsCache = [];
+
+    protected string $scrollbarTrack = '';
+
+    protected string $scrollbarHandle = '';
+
+    protected string $leftBorder = '';
+
+    protected string $rightBorder = '';
+
     public function setup(Dashboard $dashboard): void
     {
+        $this->output = '';
+        $this->screen = null;
+        $this->clearHotkeys();
         $this->dashboard = $dashboard;
         $this->theme = Solo::theme();
         $this->currentCommand = $dashboard->currentCommand();
         $this->width = $dashboard->width;
         $this->height = $dashboard->height;
+        $this->scrollbarTrack = $this->gray('│');
+        $this->scrollbarHandle = $this->cyan('┃');
+        $this->leftBorder = $this->coloredBox('│');
+        $this->rightBorder = $this->reset($this->leftBorder);
     }
 
     /**
@@ -73,9 +107,9 @@ class Renderer extends PromptsRenderer
         $this->screen->write("\e[H\e[0m\e[2B");
 
         // Write the visible content into the pane, padding with two spaces.
-        $this->visibleContent->each(function ($line) {
+        foreach ($this->visibleContent as $line) {
             $this->screen->writeln("\e[2C" . $line);
-        });
+        }
 
         if ($this->dashboard->popup) {
             $this->screen = $this->accountForPopup($this->screen, $this->dashboard->popup);
@@ -227,14 +261,19 @@ class Renderer extends PromptsRenderer
         // Maximum starting position
         $maxPos = $length - $width;
 
-        // Define the sequence of positions for the marquee effect
-        $starts = array_merge(
-            [0, 0],                        // Pause at start for one frame
-            range(1, $maxPos),             // Move forward
-            [$maxPos, $maxPos],            // Pause at end for one frame
-            range($maxPos - 1, 0, -1),     // Move backward
-            [0]                            // Pause at start again before repeating
-        );
+        $cacheKey = $length . ':' . $width;
+        if (!isset($this->marqueeStartsCache[$cacheKey])) {
+            // Define the sequence of positions for the marquee effect.
+            $this->marqueeStartsCache[$cacheKey] = array_merge(
+                [0, 0],
+                range(1, $maxPos),
+                [$maxPos, $maxPos],
+                range($maxPos - 1, 0, -1),
+                [0]
+            );
+        }
+
+        $starts = $this->marqueeStartsCache[$cacheKey];
 
         $totalFrames = count($starts);
 
@@ -250,25 +289,28 @@ class Renderer extends PromptsRenderer
         $allowedLines = $this->currentCommand->scrollPaneHeight();
         $wrappedLines = $this->currentCommand->wrappedLines();
         $start = $this->currentCommand->scrollIndex;
-        $visible = $wrappedLines->slice($start, $allowedLines);
+        $visibleContent = $wrappedLines->slice($start, $allowedLines)->values()->all();
 
-        $this->visibleContent = $visible;
+        $this->visibleContent = $visibleContent;
 
         // Replace all content with spaces. We add the content
         // into the pane separately in the __invoke method.
-        $visible = $visible->map(function ($line) {
-            return str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8'));
-        });
+        $visible = [];
+        foreach ($visibleContent as $line) {
+            $visible[] = str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8'));
+        }
+
+        $totalLines = $wrappedLines->count();
 
         // Add one since we're showing what lines they're viewing.
         // There's no such thing as a zeroth line.
-        $this->renderBoxTop($start + 1, $start + $visible->count(), $wrappedLines->count());
+        $this->renderBoxTop($start + 1, $start + count($visible), $totalLines);
 
         // Try to scroll the content, which may or may not have an
         // effect, depending on how much content there is.
         $scrolled = $this->scrollbar(
             // Subtract 1 for the left box border and 1 for the space after it.
-            $visible, $start, $allowedLines, $wrappedLines->count(), $this->width - 2
+            $visible, $start, $allowedLines, $totalLines, $this->width - 2
         );
 
         // If this conditional is true then it means that there wasn't
@@ -277,22 +319,18 @@ class Renderer extends PromptsRenderer
             $scrolled = $this->padScrolledContent($scrolled, $allowedLines);
         }
 
-        $scrolled->each(function ($line) {
-            str($line)
-                // Remove the gray scrollbar and replace it with
-                // our own that matches the theme's box.
-                ->replaceLast($this->gray('│'), $this->reset($this->coloredBox('│')))
+        foreach ($scrolled as $line) {
+            // Remove the gray scrollbar and replace it with
+            // our own that matches the theme's box.
+            $line = $this->replaceLastOccurrence($line, $this->scrollbarTrack, $this->rightBorder);
 
-                // Replace the handle with the user's preferred handle.
-                ->replaceLast($this->cyan('┃'), $this->theme->boxHandle())
+            // Replace the handle with the user's preferred handle.
+            $line = $this->replaceLastOccurrence($line, $this->scrollbarHandle, $this->theme->boxHandle());
 
-                // Only need to add the left side, because the
-                // right side is made up of the scrollbar.
-                ->prepend($this->coloredBox('│') . ' ')
-
-                // Output
-                ->pipe($this->line(...));
-        });
+            // Only need to add the left side, because the
+            // right side is made up of the scrollbar.
+            $this->line($this->leftBorder . ' ' . $line);
+        }
 
         // Box bottom border
         $this->line(
@@ -356,31 +394,18 @@ class Renderer extends PromptsRenderer
     protected function box($part)
     {
         $box = $this->currentCommand->isInteractive() ? $this->theme->boxInteractive() : $this->theme->box();
+
+        if (!isset($this->boxCache[$box])) {
+            $this->boxCache[$box] = $this->buildBoxMap($box);
+        }
+
         // Example box
         // ╭─┬─╮
         // ├─┼─┤
         // │ │ │
         // ╰─┴─╯
 
-        $lines = explode("\n", $box);
-        $lines = array_map(fn($line) => mb_str_split(trim($line)), $lines);
-
-        return match ($part) {
-            '╭' => $lines[0][0],
-            '─' => $lines[0][1],
-            '┬' => $lines[0][2],
-            '╮' => $lines[0][4],
-
-            '├' => $lines[1][0],
-            '┼' => $lines[1][2],
-            '┤' => $lines[1][4],
-
-            '│' => $lines[2][0],
-
-            '╰' => $lines[3][0],
-            '┴' => $lines[3][2],
-            '╯' => $lines[3][4],
-        };
+        return $this->boxCache[$box][$part] ?? $part;
     }
 
     protected function coloredBox($piece): string
@@ -395,20 +420,20 @@ class Renderer extends PromptsRenderer
             : $this->theme->boxBorder($text);
     }
 
-    protected function padScrolledContent(Collection $scrolled, int $allowedLines): Collection
+    protected function padScrolledContent(array $scrolled, int $allowedLines): array
     {
         // Fill out the collection with enough lines to fill the screen.
-        while ($scrolled->count() < $allowedLines) {
-            $scrolled->push('');
+        while (count($scrolled) < $allowedLines) {
+            $scrolled[] = '';
         }
 
         // Pad every line all the way to the right and add a pretend scrollbar.
-        return $scrolled->map(function ($line) {
+        return array_map(function ($line) {
             // We use gray('│') because that's what the scrollbar
             // method does. We'll customize it further down.
             // (3 = 1 left bar + 1 space + 1 right bar.)
-            return $this->pad($line, $this->width - 3) . $this->gray('│');
-        });
+            return $this->pad($line, $this->width - 3) . $this->scrollbarTrack;
+        }, $scrolled);
     }
 
     protected function calculateVisibleTabs(
@@ -498,17 +523,57 @@ class Renderer extends PromptsRenderer
 
     protected function renderHotkeySubset(array $hotkeys): void
     {
-        collect($hotkeys)->map(function (Hotkey $hotkey) {
+        foreach ($hotkeys as $hotkey) {
             $hotkey->init($this->currentCommand, $this->dashboard);
 
             if ($hotkey->visible()) {
                 $this->hotkey($hotkey->keyDisplay(), $hotkey->makeLabel() ?? '');
             }
-        });
+        }
 
         $this->line(
             $this->centerHorizontally($this->hotkeys(), $this->width)->first()
         );
+    }
+
+    /**
+     * Build a map of the box glyphs used throughout rendering.
+     *
+     * @return array<string, string>
+     */
+    protected function buildBoxMap(string $box): array
+    {
+        $lines = explode("\n", $box);
+        $lines = array_map(fn($line) => mb_str_split(trim($line)), $lines);
+
+        return [
+            '╭' => $lines[0][0] ?? '╭',
+            '─' => $lines[0][1] ?? '─',
+            '┬' => $lines[0][2] ?? '┬',
+            '╮' => $lines[0][4] ?? '╮',
+            '├' => $lines[1][0] ?? '├',
+            '┼' => $lines[1][2] ?? '┼',
+            '┤' => $lines[1][4] ?? '┤',
+            '│' => $lines[2][0] ?? '│',
+            '╰' => $lines[3][0] ?? '╰',
+            '┴' => $lines[3][2] ?? '┴',
+            '╯' => $lines[3][4] ?? '╯',
+        ];
+    }
+
+    protected function replaceLastOccurrence(string $subject, string $search, string $replace): string
+    {
+        if ($search === '') {
+            return $subject;
+        }
+
+        $position = strrpos($subject, $search);
+
+        if ($position === false) {
+            return $subject;
+        }
+
+        return substr($subject, 0, $position) . $replace . substr($subject, $position + strlen($search));
     }
 }
 
