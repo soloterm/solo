@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added configurable process drivers via `solo.process_driver` (`screen` or `native`) with backward-compatible fallback to `solo.use_screen`.
+- Added regression coverage for dashboard rendering behavior, diff-render cursor anchoring, renderer reuse, process-driver command wrapping, and shutdown signaling paths.
+
+### Changed
+
+- Updated dashboard rendering to prefer screen-diff output when available while preserving string-renderer fallback behavior.
+- Upgraded `soloterm/screen` to include the upstream `toCellBuffer()` ANSI decode fix and removed Solo's temporary local shim.
+
+### Fixed
+
+- Fixed a frame composition bug that could scroll away the first row, causing the tab strip to disappear or appear incomplete.
+- Fixed non-interactive dashboard boot crashes caused by uninitialized Laravel Prompts typed properties.
+- Fixed differential rendering artifacts by re-homing the cursor at the first changed cell in each diff frame.
+- Fixed shutdown signaling in non-screen drivers so the root process receives graceful termination.
+
 ### Removed
 
 - Removed `EnhancedTailCommand` - it has been extracted to the standalone `soloterm/vtail` package. The default Logs command now uses a simple `tail -f` command.
