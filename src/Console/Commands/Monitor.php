@@ -70,6 +70,7 @@ class Monitor extends Command
             if (ProcessTracker::isRunning($parent, $processes)) {
                 // Short sleep while parent is still alive for responsive detection.
                 usleep(static::POLL_INTERVAL_US);
+
                 continue;
             }
 

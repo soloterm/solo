@@ -229,7 +229,6 @@ class ProcessTracker
     /**
      * Resolve process command lines by PID.
      *
-     * @param  array  $pids
      * @return array<int, string>
      */
     public static function commandsByPid(array $pids): array
@@ -368,7 +367,6 @@ class ProcessTracker
     }
 
     /**
-     * @param  array  $pids
      * @return array<int>
      */
     protected static function sanitizePids(array $pids): array

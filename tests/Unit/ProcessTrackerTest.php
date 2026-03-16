@@ -211,13 +211,13 @@ class ProcessTrackerTest extends Base
 
             public static function commandsByPid(array $pids): array
             {
-                return array_intersect_key(static::$commands, array_flip(array_map('intval', $pids)));
+                return array_intersect_key(self::$commands, array_flip(array_map('intval', $pids)));
             }
 
             public static function kill(array $pids, bool $graceful = false): void
             {
-                static::$killed = array_values(array_map('intval', $pids));
-                static::$killedGracefully = $graceful;
+                self::$killed = array_values(array_map('intval', $pids));
+                self::$killedGracefully = $graceful;
             }
         };
 
