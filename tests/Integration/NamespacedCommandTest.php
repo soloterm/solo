@@ -21,12 +21,21 @@ class NamespacedCommandTest extends Base
         $actions = [
             's',
             function ($ansi, $plain) {
+                if (!str_contains($plain, 'solo.php')) {
+                    yield 250;
+
+                    return;
+                }
+
                 $this->assertStringContainsString('List', $plain);
                 $this->assertStringContainsString('solo.php', $plain);
 
                 // We've had some issues where there are newlines above the output,
                 // so this ensures that we dont have that regression.
-                $this->assertStringContainsString('solo.php', explode("\n", $plain)[3]);
+                $lines = explode("\n", $plain);
+
+                $this->assertArrayHasKey(3, $lines);
+                $this->assertStringContainsString('solo.php', $lines[3]);
             },
             Key::LEFT,
             fn($plain) => $this->assertStringContainsString('Vue3', $plain),

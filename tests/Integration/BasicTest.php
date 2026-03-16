@@ -20,7 +20,13 @@ class BasicTest extends Base
     {
         $actions = [
             function (string $ansi, string $plain) {
-                $this->assertStringContainsString('Stopped', $plain);
+                if (!str_contains($plain, ' Stopped: php artisan solo:about')) {
+                    yield 250;
+
+                    return;
+                }
+
+                $this->assertStringContainsString(' Stopped: php artisan solo:about', $plain);
                 // Red
                 $this->assertStringContainsString("\e[0;31;40m•", $ansi);
             },

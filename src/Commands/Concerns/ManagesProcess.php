@@ -180,15 +180,24 @@ trait ManagesProcess
 
     protected function utf8Locale()
     {
-        $locale = function_exists('locale_get_default')
-            ? locale_get_default()
-            : (getenv('LC_ALL') ?: (getenv('LC_CTYPE') ?: getenv('LANG')));
+        $locale = getenv('LC_ALL')
+            ?: (getenv('LC_CTYPE') ?: getenv('LANG'));
 
-        if (!$locale) {
-            return 'en_US.UTF-8';
+        if (!$locale && function_exists('locale_get_default')) {
+            $locale = locale_get_default();
         }
 
-        if (stripos($locale, 'UTF-8') !== false) {
+        if (!$locale) {
+            return 'C.UTF-8';
+        }
+
+        $normalized = strtoupper($locale);
+
+        if ($normalized === 'C' || str_contains($normalized, 'POSIX')) {
+            return 'C.UTF-8';
+        }
+
+        if (stripos($locale, 'UTF-8') !== false || stripos($locale, 'UTF8') !== false) {
             return $locale;
         }
 

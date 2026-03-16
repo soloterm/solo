@@ -11,6 +11,41 @@ use SoloTerm\Solo\Manager;
 
 class TestCommandTest extends TestCase
 {
+    private string|false $originalLcAll;
+
+    private string|false $originalLcCtype;
+
+    private string|false $originalLang;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->originalLcAll = getenv('LC_ALL');
+        $this->originalLcCtype = getenv('LC_CTYPE');
+        $this->originalLang = getenv('LANG');
+    }
+
+    protected function tearDown(): void
+    {
+        $this->restoreEnvironmentVariable('LC_ALL', $this->originalLcAll);
+        $this->restoreEnvironmentVariable('LC_CTYPE', $this->originalLcCtype);
+        $this->restoreEnvironmentVariable('LANG', $this->originalLang);
+
+        parent::tearDown();
+    }
+
+    private function restoreEnvironmentVariable(string $name, string|false $value): void
+    {
+        if ($value === false) {
+            putenv($name);
+
+            return;
+        }
+
+        putenv("{$name}={$value}");
+    }
+
     #[Test]
     public function test_command_automatically_sets_testing_environment(): void
     {
@@ -189,5 +224,41 @@ class TestCommandTest extends TestCase
         $command->block('Test reason');
 
         $this->assertFalse($command->autostart);
+    }
+
+    #[Test]
+    public function locale_detection_prefers_utf8_environment_variables_over_locale_default(): void
+    {
+        putenv('LC_ALL=C.UTF-8');
+        putenv('LC_CTYPE=C.UTF-8');
+        putenv('LANG=C.UTF-8');
+
+        $command = new class extends Command
+        {
+            public function detectedLocale(): string
+            {
+                return $this->utf8Locale();
+            }
+        };
+
+        $this->assertSame('C.UTF-8', $command->detectedLocale());
+    }
+
+    #[Test]
+    public function locale_detection_normalizes_posix_locale_to_c_utf8(): void
+    {
+        putenv('LC_ALL=en_US_POSIX');
+        putenv('LC_CTYPE');
+        putenv('LANG');
+
+        $command = new class extends Command
+        {
+            public function detectedLocale(): string
+            {
+                return $this->utf8Locale();
+            }
+        };
+
+        $this->assertSame('C.UTF-8', $command->detectedLocale());
     }
 }

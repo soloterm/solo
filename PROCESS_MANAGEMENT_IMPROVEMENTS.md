@@ -701,7 +701,6 @@ protected function withSymfonyProcess(Closure $callback)
         }
 
         $property = $reflection->getProperty('process');
-        $property->setAccessible(true);
         $symfonyProcess = $property->getValue($this->process);
 
         if (!$symfonyProcess instanceof SymfonyProcess) {
