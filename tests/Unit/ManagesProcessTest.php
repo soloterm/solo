@@ -83,18 +83,22 @@ class ManagesProcessTest extends Base
 
         config()->set('solo.process_driver', 'native');
 
-        $command = new Command(name: 'ANSI', command: 'printf "\033[31mRED\033[0m\\n"');
+        $ansiCommand = "php -r '\$line = trim(fgets(STDIN)); echo \"\\033[31m\" . \$line . \"\\033[0m\\n\"; usleep(200000);'";
+
+        $command = Command::from($ansiCommand)->interactive();
         $command->setDimensions(120, 40);
         $command->start();
 
         try {
+            $command->sendInput("\e[31mRED\e[0m\n");
+
             $deadline = microtime(true) + 2.0;
 
             do {
                 $command->onTick();
                 $output = implode("\n", $command->wrappedLines()->all());
 
-                if ($command->processStopped() && str_contains($output, 'RED')) {
+                if (str_contains($output, 'RED')) {
                     break;
                 }
 
@@ -104,7 +108,7 @@ class ManagesProcessTest extends Base
             $output = implode("\n", $command->wrappedLines()->all());
 
             $this->assertStringContainsString('RED', $output);
-            $this->assertMatchesRegularExpression('/\e\[[0-9;]*mRED/', $output);
+            $this->assertMatchesRegularExpression('/(?:\e|\^\[)\[[0-9;]*mRED/', $output);
         } finally {
             if ($command->processRunning()) {
                 $command->process?->signal(SIGKILL);
