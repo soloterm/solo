@@ -65,6 +65,24 @@ class ProcessTrackerTest extends Base
     }
 
     #[Test]
+    public function children_respects_the_maximum_depth_limit(): void
+    {
+        $processes = [];
+
+        for ($pid = 2; $pid <= 80; $pid++) {
+            $processes[] = [
+                'pid' => $pid,
+                'ppid' => $pid - 1,
+            ];
+        }
+
+        $children = ProcessTracker::children(1, $processes);
+
+        $this->assertCount(50, $children);
+        $this->assertSame(range(2, 51), $children);
+    }
+
+    #[Test]
     public function is_running_can_use_a_prefetched_process_snapshot(): void
     {
         $this->assertTrue(FakeProcessTracker::isRunning(42, [
@@ -178,6 +196,52 @@ class ProcessTrackerTest extends Base
         $this->expectException(RuntimeException::class);
 
         FakeProcessTracker::getProcessList();
+    }
+
+    #[Test]
+    public function kill_matching_commands_only_kills_when_command_signature_matches(): void
+    {
+        $tracker = new class extends ProcessTracker
+        {
+            public static array $commands = [];
+
+            public static array $killed = [];
+
+            public static bool $killedGracefully = false;
+
+            public static function commandsByPid(array $pids): array
+            {
+                return array_intersect_key(static::$commands, array_flip(array_map('intval', $pids)));
+            }
+
+            public static function kill(array $pids, bool $graceful = false): void
+            {
+                static::$killed = array_values(array_map('intval', $pids));
+                static::$killedGracefully = $graceful;
+            }
+        };
+
+        $tracker::$commands = [
+            100 => 'new command',
+            200 => 'tail -f /tmp/solo.log',
+        ];
+
+        $tracker::killMatchingCommands([
+            100 => 'old command',
+            200 => 'tail -f /tmp/solo.log',
+            300 => 'no longer running',
+        ], graceful: true);
+
+        $this->assertSame([200], $tracker::$killed);
+        $this->assertTrue($tracker::$killedGracefully);
+    }
+
+    #[Test]
+    public function is_screen_command_detects_wrapper_commands_case_insensitively(): void
+    {
+        $this->assertTrue(ProcessTracker::isScreenCommand('screen -U -q sh -c "echo hi"'));
+        $this->assertTrue(ProcessTracker::isScreenCommand(' SCREEN -dmS solo')); // leading whitespace
+        $this->assertFalse(ProcessTracker::isScreenCommand('php artisan queue:work'));
     }
 }
 

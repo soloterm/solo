@@ -83,6 +83,23 @@ class DiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function diff_frames_start_from_a_known_cursor_home_position(): void
+    {
+        $diffRenderer = new DiffRenderer(20, 5);
+
+        $initial = new Screen(20, 5);
+        $initial->write(str_repeat('A', 20));
+        $diffRenderer->render($initial);
+
+        $next = new Screen(20, 5);
+        $next->write(str_repeat('A', 19) . 'Z');
+
+        $diff = $diffRenderer->render($next);
+
+        $this->assertStringStartsWith("\e[H", $diff);
+    }
+
+    #[Test]
     public function resize_invalidates_state(): void
     {
         $diffRenderer = new DiffRenderer(80, 24);

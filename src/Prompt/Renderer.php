@@ -102,7 +102,9 @@ class Renderer extends PromptsRenderer
 
         $this->screen = new Screen($this->width, $this->height);
         $this->screen->write("\e[0m");
-        $this->screen->write($this->output);
+        // Match __toString() semantics so the virtual screen does not scroll
+        // and drop the first row when the frame ends with a trailing newline.
+        $this->screen->write((string) $this);
         // Move home then down two lines to get to the content pane.
         $this->screen->write("\e[H\e[0m\e[2B");
 
@@ -167,10 +169,12 @@ class Renderer extends PromptsRenderer
 
     protected function renderTabs(): void
     {
-        $tabs = collect($this->dashboard->commands)->map(fn(Command $command) => [
+        $tabs = collect($this->dashboard->commands)->values()->map(fn(Command $command, int $index) => [
             'command' => $command,
             'display' => " $command->name ",
-            'focused' => $command->isFocused()
+            // Fallback to selectedCommand so the focused tab stays visible
+            // even if focus state drifts on command instances.
+            'focused' => $command->isFocused() || $index === $this->dashboard->selectedCommand,
         ]);
 
         // Find the index of the focused tab.

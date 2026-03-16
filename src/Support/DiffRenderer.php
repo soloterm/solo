@@ -147,6 +147,7 @@ class DiffRenderer
         $this->styleTracker->reset();
 
         $output = '';
+        $hasChanges = false;
 
         for ($row = 0; $row < $this->height; $row++) {
             if ($oldState->rowEquals($row, $newState)) {
@@ -167,6 +168,14 @@ class DiffRenderer
                     continue;
                 }
 
+                if (!$hasChanges) {
+                    // Re-home when the first changed cell is encountered so
+                    // relative cursor movement starts from a known position
+                    // instead of relying on terminal cursor residue.
+                    $output = "\e[H";
+                    $hasChanges = true;
+                }
+
                 // Get optimized cursor movement
                 $output .= $this->cursorOptimizer->moveTo($row, $col);
 
@@ -179,6 +188,10 @@ class DiffRenderer
                 // Track cursor position after character
                 $this->cursorOptimizer->advance(max(0, Grapheme::wcwidth($newCell->char)));
             }
+        }
+
+        if (!$hasChanges) {
+            return '';
         }
 
         // Reset styles at the end if needed

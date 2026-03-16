@@ -31,7 +31,7 @@ class Solo extends Command
 
     protected function checkScreenVersion(): void
     {
-        if (!(bool) Config::get('solo.use_screen', true)) {
+        if (!$this->usesScreenDriver()) {
             return;
         }
 
@@ -48,6 +48,17 @@ class Solo extends Command
             Log::error('Unable to determine `screen` version. Make sure `screen` is installed.');
         }
 
+    }
+
+    protected function usesScreenDriver(): bool
+    {
+        $driver = Config::get('solo.process_driver');
+
+        if (is_string($driver) && trim($driver) !== '') {
+            return strtolower(trim($driver)) === 'screen';
+        }
+
+        return (bool) Config::get('solo.use_screen', true);
     }
 
     protected function monitor()

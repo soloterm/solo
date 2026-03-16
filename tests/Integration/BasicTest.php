@@ -110,4 +110,33 @@ class BasicTest extends Base
             ]);
         });
     }
+
+    #[Test]
+    public function restarting_a_previously_stopped_command_stays_clean(): void
+    {
+        $actions = [
+            fn(string $ansi, string $plain) => $this->assertStringContainsString(' Running: sleep 1000', $plain),
+            's',
+            250,
+            function (string $ansi, string $plain) {
+                $this->assertStringContainsString(' Stopped:', $plain);
+                $this->assertStringNotContainsString('Force killing!', $plain);
+            },
+            'r',
+            250,
+            fn(string $ansi, string $plain) => $this->assertStringContainsString(' Running: sleep 1000', $plain),
+            's',
+            250,
+            function (string $ansi, string $plain) {
+                $this->assertStringContainsString(' Stopped:', $plain);
+                $this->assertStringNotContainsString('Force killing!', $plain);
+            },
+        ];
+
+        $this->runSolo($actions, function () {
+            config()->set('solo.commands', [
+                'Sleep' => 'sleep 1000',
+            ]);
+        });
+    }
 }

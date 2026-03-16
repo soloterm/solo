@@ -43,6 +43,11 @@ abstract class Base extends TestCase
 
     protected int $reservedLines = 4;
 
+    /**
+     * Hard safety timeout for integration test loops.
+     */
+    protected int $maxLoopMilliseconds = 30_000;
+
     protected array $newFrameCallbacks = [];
 
     protected string $tailLogPath;
@@ -170,6 +175,7 @@ abstract class Base extends TestCase
         $millisecondsSinceLastAction = 0;
         $millisecondsBetweenFrames = 10;
         $millisecondsBetweenActions = 500;
+        $elapsedMilliseconds = 0;
 
         while ($this->process->running()) {
             // Move up 1000 rows to column 1
@@ -197,6 +203,17 @@ abstract class Base extends TestCase
 
             usleep($millisecondsBetweenFrames * 1000);
             $millisecondsSinceLastAction += $millisecondsBetweenFrames;
+            $elapsedMilliseconds += $millisecondsBetweenFrames;
+
+            if ($elapsedMilliseconds >= $this->maxLoopMilliseconds) {
+                $this->input->write(Key::CTRL_C);
+
+                throw new \RuntimeException(sprintf(
+                    'Integration test timed out after %d ms. Next action: %s',
+                    $this->maxLoopMilliseconds,
+                    json_encode(head($actions))
+                ));
+            }
 
             if ($millisecondsSinceLastAction < $millisecondsBetweenActions) {
                 continue;

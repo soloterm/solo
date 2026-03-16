@@ -28,6 +28,12 @@ use Symfony\Component\Process\Process as SymfonyProcess;
 
 trait ManagesProcess
 {
+    protected const PROCESS_DRIVER_SCREEN = 'screen';
+
+    protected const PROCESS_DRIVER_NATIVE = 'native';
+
+    protected const PROCESS_DRIVER_LEGACY = 'legacy';
+
     /**
      * Maximum buffer size before forced flush.
      * Balances memory usage, responsiveness, and UTF-8 safety.
@@ -88,6 +94,11 @@ trait ManagesProcess
     protected bool $hadOutputThisTick = false;
 
     /**
+     * Whether command output should be filtered by screen markers.
+     */
+    protected bool $expectsOutputMarkers = false;
+
+    /**
      * Cached reflection property for InvokedProcess::$process.
      */
     protected static ?ReflectionProperty $invokedProcessProperty = null;
@@ -145,12 +156,40 @@ trait ManagesProcess
 
     protected function buildCommandArray(Screen $screen): array|string
     {
-        $useGnuScreen = (bool) Config::get('solo.use_screen', true);
+        return match ($this->processDriver()) {
+            static::PROCESS_DRIVER_SCREEN => $this->buildScreenCommandArray($screen),
+            static::PROCESS_DRIVER_NATIVE => $this->buildNativeCommandArray($screen),
+            default => $this->buildLegacyCommand(),
+        };
+    }
 
-        // https://github.com/soloterm/solo/pull/81
-        if (!$useGnuScreen) {
-            return $this->command;
-        }
+    protected function buildLegacyCommand(): string
+    {
+        // Preserve legacy no-screen behavior for backwards compatibility.
+        $this->expectsOutputMarkers = false;
+
+        return $this->command;
+    }
+
+    protected function buildNativeCommandArray(Screen $screen): array
+    {
+        $this->expectsOutputMarkers = false;
+
+        $local = $this->localeEnvironmentVariables();
+        $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
+
+        $built = implode(' && ', [
+            $local,
+            $size,
+            'exec ' . $this->command,
+        ]);
+
+        return ['bash', '-lc', $built];
+    }
+
+    protected function buildScreenCommandArray(Screen $screen): array
+    {
+        $this->expectsOutputMarkers = true;
 
         $local = $this->localeEnvironmentVariables();
         $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
@@ -187,6 +226,27 @@ trait ManagesProcess
         ]);
 
         return ['bash', '-c', $built];
+    }
+
+    protected function processDriver(): string
+    {
+        $driver = Config::get('solo.process_driver');
+
+        if (is_string($driver)) {
+            $normalized = strtolower(trim($driver));
+
+            if (in_array($normalized, [
+                static::PROCESS_DRIVER_SCREEN,
+                static::PROCESS_DRIVER_NATIVE,
+                static::PROCESS_DRIVER_LEGACY,
+            ], true)) {
+                return $normalized;
+            }
+        }
+
+        return (bool) Config::get('solo.use_screen', true)
+            ? static::PROCESS_DRIVER_SCREEN
+            : static::PROCESS_DRIVER_LEGACY;
     }
 
     protected function localeEnvironmentVariables()
@@ -345,7 +405,8 @@ trait ManagesProcess
     }
 
     /**
-     * Send SIGTERM to child processes (excluding Screen wrapper).
+     * Send SIGTERM to the running command process tree.
+     * In screen mode, avoid signalling the screen shim directly.
      * Re-enumerates children each time to catch newly spawned processes.
      */
     protected function sendTermSignals(): void
@@ -354,6 +415,14 @@ trait ManagesProcess
 
         if ($pid <= 0) {
             return;
+        }
+
+        $usesScreenShim = $this->processDriver() === static::PROCESS_DRIVER_SCREEN;
+
+        // In native/legacy modes, the root process is the user command (or shell wrapper)
+        // and should participate in graceful termination.
+        if (!$usesScreenShim) {
+            ProcessTracker::signal([$pid], SIGTERM);
         }
 
         if ($this->childrenProcessPid !== $pid) {
@@ -371,7 +440,16 @@ trait ManagesProcess
             return;
         }
 
-        $commandsByPid = ProcessTracker::commandsByPid($activePids);
+        try {
+            $commandsByPid = ProcessTracker::commandsByPid($activePids);
+        } catch (\RuntimeException $e) {
+            Log::warning('Solo: Failed to snapshot child process commands during shutdown', [
+                'pid' => $pid,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
 
         // Keep only tracked PIDs whose command signature still matches.
         foreach ($this->children as $childPid => $commandSnapshot) {
@@ -394,7 +472,7 @@ trait ManagesProcess
         $terminableChildren = [];
 
         foreach ($this->children as $childPid => $commandSnapshot) {
-            if (ProcessTracker::isScreenCommand($commandSnapshot)) {
+            if ($usesScreenShim && ProcessTracker::isScreenCommand($commandSnapshot)) {
                 continue;
             }
 
@@ -585,7 +663,14 @@ trait ManagesProcess
             $this->stopInitiatedAt = null;
             $this->waitingMessageCounter = 0;
 
-            ProcessTracker::killMatchingCommands($trackedChildren);
+            try {
+                ProcessTracker::killMatchingCommands($trackedChildren);
+            } catch (\RuntimeException $e) {
+                Log::warning('Solo: Failed to verify child commands before cleanup', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             $this->resetProcessTrackingState();
 
             $this->addLine('Stopped.');

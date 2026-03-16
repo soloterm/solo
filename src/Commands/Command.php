@@ -235,8 +235,10 @@ class Command implements Loopable
 
     public function addOutput($text)
     {
-        $text = Str::before($text, $this->outputEndMarker);
-        $text = Str::after($text, $this->outputStartMarker);
+        if ($this->expectsOutputMarkers) {
+            $text = Str::before($text, $this->outputEndMarker);
+            $text = Str::after($text, $this->outputStartMarker);
+        }
 
         $this->screen->write($text);
     }

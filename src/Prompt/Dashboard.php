@@ -109,6 +109,8 @@ class Dashboard extends Prompt
 
     public function __construct()
     {
+        $this->initializePromptDefaults();
+
         $this->createAltScreen();
         $this->listenForSignals();
         $this->listenForEvents();
@@ -172,7 +174,23 @@ class Dashboard extends Prompt
 
     public function run(): void
     {
+        $this->initializePromptDefaults();
+
         $this->setup($this->showDashboard(...));
+    }
+
+    protected function initializePromptDefaults(): void
+    {
+        // Prompt::validate() reads this directly in non-interactive mode.
+        if (!isset($this->required)) {
+            $this->required = false;
+        }
+
+        // Prompt::validate() may touch `$validate` when global validation
+        // callbacks are configured by other prompts in the same process.
+        if (!isset($this->validate)) {
+            $this->validate = null;
+        }
     }
 
     public function currentCommand(): Command

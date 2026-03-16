@@ -89,9 +89,10 @@ class Monitor extends Command
 
             // Don't kill ourselves
             $trackedChildren = array_values(array_diff($trackedChildren, [getmypid()]));
+            $trackedChildren = ProcessTracker::running($trackedChildren);
 
             if (!empty($trackedChildren)) {
-                ProcessTracker::kill($trackedChildren);
+                ProcessTracker::kill($trackedChildren, graceful: true);
                 $this->warn('Killed processes: ' . implode(', ', $trackedChildren));
             }
 

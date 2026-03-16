@@ -63,6 +63,22 @@ class DashboardRenderTest extends Base
         $this->assertSame(1, CachedRenderer::$instances);
         $this->assertSame(2, CachedRenderer::$invocations);
     }
+
+    #[Test]
+    public function dashboard_run_does_not_crash_in_non_interactive_mode_when_required_is_unset(): void
+    {
+        Dashboard::setOutput(new BufferedConsoleOutput);
+        Dashboard::interactive(false);
+
+        try {
+            $dashboard = new DashboardHarness;
+            $dashboard->run();
+
+            $this->assertTrue(true);
+        } finally {
+            Dashboard::interactive(true);
+        }
+    }
 }
 
 class DashboardHarness extends Dashboard

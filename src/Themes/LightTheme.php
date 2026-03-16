@@ -34,12 +34,12 @@ class LightTheme implements Theme
 
     public function tabBlurred(string $text, string $state): string
     {
-        return $this->tabIndicator($state) . $this->dim(ltrim($text));
+        return $this->tabIndicator($state) . $this->gray(ltrim($text));
     }
 
     public function tabMore(string $text): string
     {
-        return $this->dim($text);
+        return $this->gray($text);
     }
 
     public function tabIndicator(string $state): string

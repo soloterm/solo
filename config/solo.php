@@ -62,10 +62,19 @@ return [
     ],
 
     /**
-     * By default, we prefer to use GNU Screen as an intermediary between Solo
-     * and the underlying process. This helps us with many issues, including
-     * PTY and some ANSI rendering things. Not all environments have Screen,
-     * so you can turn it off for a slightly degraded experience.
+     * Process driver used to execute commands.
+     *
+     * Supported values:
+     * - screen: Wrap commands with GNU Screen (default behavior)
+     * - native: Run directly in Solo's PTY with locale + stty bootstrap
+     *
+     * Leave unset to keep legacy `use_screen` behavior.
+     */
+    'process_driver' => env('SOLO_PROCESS_DRIVER'),
+
+    /**
+     * Backwards-compatible fallback for projects that still use SOLO_USE_SCREEN.
+     * Prefer `process_driver` for new setups.
      */
     'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
 
