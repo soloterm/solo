@@ -47,8 +47,6 @@ class CommandPalette extends Popup
             label: 'Type a new command',
             placeholder: 'php artisan foo:bar'
         );
-
-        dump($random->value());
     }
 
     public function handleInput($key)

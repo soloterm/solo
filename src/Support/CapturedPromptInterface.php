@@ -9,6 +9,8 @@
 
 namespace SoloTerm\Solo\Support;
 
+use SoloTerm\Screen\Screen;
+
 interface CapturedPromptInterface
 {
     public function setScreen(Screen $screen);

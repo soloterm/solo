@@ -11,6 +11,8 @@ namespace SoloTerm\Solo\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use SoloTerm\Screen\Buffers\CellBuffer;
+use SoloTerm\Screen\Cell;
 use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Support\DiffRenderer;
 
@@ -113,6 +115,30 @@ class DiffRendererTest extends TestCase
         $diffRenderer->invalidate();
 
         $this->assertFalse($diffRenderer->hasState());
+    }
+
+    #[Test]
+    public function unchanged_rows_skip_cell_level_comparison(): void
+    {
+        $diffRenderer = new InstrumentedDiffRenderer(4, 3);
+        $oldState = new CountingCellBuffer(4, 3);
+        $newState = new CountingCellBuffer(4, 3);
+
+        for ($row = 0; $row < 3; $row++) {
+            for ($col = 0; $col < 4; $col++) {
+                $oldState->setCell($row, $col, new Cell('A'));
+                $newState->setCell($row, $col, new Cell('A'));
+            }
+        }
+
+        $newState->setCell(1, 2, new Cell('B'));
+
+        $output = $diffRenderer->renderBuffers($oldState, $newState);
+
+        $this->assertNotEmpty($output);
+        $this->assertSame(3, $oldState->rowEqualsCalls);
+        $this->assertSame(4, $oldState->getCellCalls);
+        $this->assertSame(4, $newState->getCellCalls);
     }
 
     #[Test]
@@ -229,5 +255,34 @@ class DiffRendererTest extends TestCase
 
         // Output should be proportional to changes - 1 cell should output much less
         $this->assertLessThan($allCellsBytes, $singleCellBytes);
+    }
+}
+
+class InstrumentedDiffRenderer extends DiffRenderer
+{
+    public function renderBuffers(CellBuffer $oldState, CellBuffer $newState): string
+    {
+        return $this->renderDiff($oldState, $newState);
+    }
+}
+
+class CountingCellBuffer extends CellBuffer
+{
+    public int $getCellCalls = 0;
+
+    public int $rowEqualsCalls = 0;
+
+    public function getCell(int $row, int $col): Cell
+    {
+        $this->getCellCalls++;
+
+        return parent::getCell($row, $col);
+    }
+
+    public function rowEquals(int $row, CellBuffer $other): bool
+    {
+        $this->rowEqualsCalls++;
+
+        return parent::rowEquals($row, $other);
     }
 }

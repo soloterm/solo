@@ -428,27 +428,13 @@ class Dashboard extends Prompt
     {
         // Generate the frame using the standard renderer
         $renderer = Solo::getRenderer();
-        $rendererInstance = (new $renderer($this))($this);
+        $renderedFrame = (new $renderer($this))($this);
 
-        // The Renderer returns itself, but __toString gives us the frame
-        $frame = (string) $rendererInstance;
-
-        // Try differential rendering if available
-        if ($this->diffRenderer !== null && method_exists($rendererInstance, 'getScreen')) {
-            try {
-                $screen = $rendererInstance->getScreen();
-                $output = $this->diffRenderer->render($screen);
-
-                if ($output !== '') {
-                    $this->output()->write($output);
-                }
-
-                return;
-            } catch (\Throwable $e) {
-                // Differential rendering failed, fall through to string comparison
-                $this->diffRenderer = null; // Disable for future frames
-            }
+        if (is_object($renderedFrame) && $this->renderDiffFrame($renderedFrame)) {
+            return;
         }
+
+        $frame = (string) $renderedFrame;
 
         // Fallback to string-based comparison (original behavior)
         if ($frame !== $this->prevFrame) {
@@ -456,6 +442,34 @@ class Dashboard extends Prompt
             $this->output()->write($frame);
 
             $this->prevFrame = $frame;
+        }
+    }
+
+    protected function renderDiffFrame(object $rendererInstance): bool
+    {
+        if ($this->diffRenderer === null || !method_exists($rendererInstance, 'getScreen')) {
+            return false;
+        }
+
+        try {
+            $screen = $rendererInstance->getScreen();
+
+            if (!$screen instanceof Screen) {
+                return false;
+            }
+
+            $output = $this->diffRenderer->render($screen);
+
+            if ($output !== '') {
+                $this->output()->write($output);
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            // Differential rendering failed, fall through to string comparison
+            $this->diffRenderer = null; // Disable for future frames
+
+            return false;
         }
     }
 

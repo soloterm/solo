@@ -9,6 +9,7 @@
 
 namespace SoloTerm\Solo\Support;
 
+use SoloTerm\Screen\Screen;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 use Symfony\Component\Console\Output\OutputInterface;

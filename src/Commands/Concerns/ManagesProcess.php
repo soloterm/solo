@@ -81,8 +81,6 @@ trait ManagesProcess
     {
         $this->input ??= new InputStream;
 
-        $command = explode(' ', $this->command);
-
         // Resources about screen version needing to be 5.0.0
         // @TODO add a check on startup to see what version `screen` they are using
         // https://chatgpt.com/share/67b7b74e-3db8-8011-9e2b-79deb71eb12d
@@ -125,13 +123,13 @@ trait ManagesProcess
         ]);
     }
 
-    protected function buildCommandArray(Screen $screen): array
+    protected function buildCommandArray(Screen $screen): array|string
     {
         $useGnuScreen = (bool) Config::get('solo.use_screen', true);
 
         // https://github.com/soloterm/solo/pull/81
         if (!$useGnuScreen) {
-            return explode(' ', $this->command);
+            return $this->command;
         }
 
         $local = $this->localeEnvironmentVariables();

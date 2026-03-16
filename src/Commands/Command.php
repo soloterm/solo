@@ -66,6 +66,18 @@ class Command implements Loopable
      */
     protected ?string $cachedOutput = null;
 
+    /**
+     * Cached wrapped lines from the last render.
+     *
+     * @var array<int, string>|null
+     */
+    protected ?array $cachedWrappedLines = null;
+
+    /**
+     * Sequence number at which wrapped lines were last computed.
+     */
+    protected int $lastWrappedLinesSeqNo = 0;
+
     public static function from(string $command): static
     {
         return new static(command: $command);
@@ -128,12 +140,25 @@ class Command implements Loopable
 
     public function setDimensions($width, $height): static
     {
+        $existingOutput = isset($this->screen) ? $this->renderScreenBuffer() : null;
+
         $this->width = $width;
         $this->height = $height;
 
         $this->screen = $this->makeNewScreen();
+
+        if ($existingOutput !== null && $existingOutput !== '') {
+            $this->screen->write($existingOutput);
+        }
+
         $this->cachedOutput = null;
+        $this->cachedWrappedLines = null;
         $this->lastRenderedSeqNo = 0;
+        $this->lastWrappedLinesSeqNo = 0;
+
+        if ($this->processRunning()) {
+            $this->sendSizeViaStty();
+        }
 
         return $this;
     }
@@ -260,7 +285,9 @@ class Command implements Loopable
     {
         $this->screen = $this->makeNewScreen();
         $this->cachedOutput = null;
+        $this->cachedWrappedLines = null;
         $this->lastRenderedSeqNo = 0;
+        $this->lastWrappedLinesSeqNo = 0;
     }
 
     public function catchUpScroll(): void
@@ -339,13 +366,18 @@ class Command implements Loopable
 
         if ($this->cachedOutput === null || $currentSeqNo !== $this->lastRenderedSeqNo) {
             // Screen has changed, get fresh output
-            $this->cachedOutput = $this->screen->output();
+            $this->cachedOutput = $this->renderScreenBuffer();
             $this->lastRenderedSeqNo = $currentSeqNo;
         }
 
-        $lines = explode(PHP_EOL, $this->cachedOutput);
+        if ($this->cachedWrappedLines === null || $currentSeqNo !== $this->lastWrappedLinesSeqNo) {
+            $lines = explode(PHP_EOL, $this->cachedOutput);
 
-        return $this->modifyWrappedLines(collect($lines))->values();
+            $this->cachedWrappedLines = $this->modifyWrappedLines(collect($lines))->values()->all();
+            $this->lastWrappedLinesSeqNo = $currentSeqNo;
+        }
+
+        return collect($this->cachedWrappedLines);
     }
 
     /**
@@ -354,6 +386,25 @@ class Command implements Loopable
     public function hasNewOutput(): bool
     {
         return $this->screen->getSeqNo() !== $this->lastRenderedSeqNo;
+    }
+
+    protected function renderScreenBuffer(): string
+    {
+        $ansi = $this->screen->ansi->compressedAnsiBuffer();
+        $printable = $this->screen->printable->getBuffer();
+        $lines = [];
+
+        foreach ($printable as $lineIndex => $line) {
+            $renderedLine = '';
+
+            foreach ($line as $col => $char) {
+                $renderedLine .= ($ansi[$lineIndex][$col] ?? '') . $char;
+            }
+
+            $lines[] = $renderedLine;
+        }
+
+        return implode(PHP_EOL, $lines);
     }
 
     protected function makeNewScreen()

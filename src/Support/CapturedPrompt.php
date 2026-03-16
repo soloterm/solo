@@ -13,6 +13,7 @@ use Exception;
 use Laravel\Prompts\Key;
 use Laravel\Prompts\Themes\Default as Themes;
 use ReflectionClass;
+use SoloTerm\Screen\Screen;
 
 trait CapturedPrompt
 {
@@ -54,8 +55,8 @@ trait CapturedPrompt
         $terminal->width = $this->screen->width;
         $terminal->height = $this->screen->height;
 
-        $originalTerminal = static::$terminal;
-        $originalOutput = static::$output;
+        $originalTerminal = static::terminal();
+        $originalOutput = static::output();
 
         static::$terminal = $terminal;
         static::$output = new ScreenOutput($this->screen);

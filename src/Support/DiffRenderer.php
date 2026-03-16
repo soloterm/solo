@@ -30,6 +30,11 @@ class DiffRenderer
     protected ?CellBuffer $terminalState = null;
 
     /**
+     * Scratch CellBuffer reused for the next frame to avoid per-tick allocations.
+     */
+    protected ?CellBuffer $scratchState = null;
+
+    /**
      * Terminal dimensions.
      */
     protected int $width;
@@ -57,6 +62,7 @@ class DiffRenderer
             $this->height = $height;
             // Reset state on resize - need full redraw
             $this->terminalState = null;
+            $this->scratchState = null;
         }
     }
 
@@ -76,22 +82,25 @@ class DiffRenderer
      */
     public function render(Screen $screen): string
     {
-        // Convert screen to CellBuffer for cell-level comparison
-        $newState = $screen->toCellBuffer();
+        // Reuse a scratch buffer so the diff path doesn't allocate a fresh frame buffer every tick.
+        $newState = $screen->toCellBuffer($this->scratchState);
 
         // First frame - need full render
         if ($this->terminalState === null) {
             $this->terminalState = $newState;
+            $this->scratchState = new CellBuffer($this->width, $this->height);
 
             // Return full output for first frame
             return "\e[H" . $screen->output();
         }
 
-        // Direct comparison between old and new state - O(changed) not O(all)
+        // Compare the previous and current cell state to emit only the changed output.
         $output = $this->renderDiff($this->terminalState, $newState);
 
-        // Replace terminal state with new state for next frame
+        // Swap buffers so the previous terminal state becomes next frame's scratch buffer.
+        $previousState = $this->terminalState;
         $this->terminalState = $newState;
+        $this->scratchState = $previousState;
 
         return $output;
     }
@@ -102,6 +111,7 @@ class DiffRenderer
     public function invalidate(): void
     {
         $this->terminalState = null;
+        $this->scratchState = null;
     }
 
     /**
@@ -115,10 +125,9 @@ class DiffRenderer
     /**
      * Render differences between two CellBuffers.
      *
-     * Uses single-pass cell-level comparison with optimized cursor
-     * movement and style tracking. Direct comparison is faster than
-     * hash-based row comparison because it avoids double iteration
-     * and Cell::equals() can short-circuit on early differences.
+     * Skips unchanged rows via cached row hashes, then compares only the
+     * changed rows cell-by-cell with optimized cursor movement and style
+     * tracking.
      */
     protected function renderDiff(CellBuffer $oldState, CellBuffer $newState): string
     {
@@ -127,6 +136,10 @@ class DiffRenderer
         $parts = [];
 
         for ($row = 0; $row < $this->height; $row++) {
+            if ($oldState->rowEquals($row, $newState)) {
+                continue;
+            }
+
             for ($col = 0; $col < $this->width; $col++) {
                 $oldCell = $oldState->getCell($row, $col);
                 $newCell = $newState->getCell($row, $col);

@@ -54,7 +54,10 @@ class Renderer extends PromptsRenderer
         $this->height = $dashboard->height;
     }
 
-    public function __invoke(Dashboard $dashboard): string
+    /**
+     * Render the dashboard and retain the composed Screen for diff-based output.
+     */
+    public function __invoke(Dashboard $dashboard)
     {
         $this->setup($dashboard);
 
