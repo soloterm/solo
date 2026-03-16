@@ -62,27 +62,27 @@ class ScreenOutput implements OutputInterface
 
     public function isSilent(): bool
     {
-        return OutputInterface::VERBOSITY_SILENT === $this->verbosity;
+        return $this->verbosity === OutputInterface::VERBOSITY_SILENT;
     }
 
     public function isQuiet(): bool
     {
-        return OutputInterface::VERBOSITY_QUIET === $this->verbosity;
+        return $this->verbosity === OutputInterface::VERBOSITY_QUIET;
     }
 
     public function isVerbose(): bool
     {
-        return OutputInterface::VERBOSITY_VERBOSE <= $this->verbosity;
+        return $this->verbosity >= OutputInterface::VERBOSITY_VERBOSE;
     }
 
     public function isVeryVerbose(): bool
     {
-        return OutputInterface::VERBOSITY_VERY_VERBOSE <= $this->verbosity;
+        return $this->verbosity >= OutputInterface::VERBOSITY_VERY_VERBOSE;
     }
 
     public function isDebug(): bool
     {
-        return OutputInterface::VERBOSITY_DEBUG <= $this->verbosity;
+        return $this->verbosity >= OutputInterface::VERBOSITY_DEBUG;
     }
 
     public function setDecorated(bool $decorated): void

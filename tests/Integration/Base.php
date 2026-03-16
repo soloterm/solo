@@ -17,10 +17,12 @@ use Laravel\Prompts\Key;
 use Laravel\Prompts\Terminal;
 use Laravel\SerializableClosure\SerializableClosure;
 use Orchestra\Testbench\TestCase;
+use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Providers\SoloServiceProvider;
 use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\PendingProcess;
 use SoloTerm\Solo\Tests\Support\SoloTestServiceProvider;
+use SoloTerm\Solo\Tests\Support\StringDashboardRenderer;
 use Symfony\Component\Process\InputStream;
 
 use function Orchestra\Testbench\package_path;
@@ -127,8 +129,8 @@ abstract class Base extends TestCase
             // Integration harness frame parsing expects full-frame writes.
             // Force the string renderer so test callbacks can reliably
             // observe complete frames.
-            \SoloTerm\Solo\Facades\Solo::setRenderer(
-                \SoloTerm\Solo\Tests\Support\StringDashboardRenderer::class
+            Solo::setRenderer(
+                StringDashboardRenderer::class
             );
 
             call_user_func($provider);
