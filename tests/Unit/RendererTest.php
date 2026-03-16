@@ -14,14 +14,14 @@ class RendererTest extends Base
     public function renderer_keeps_tabs_on_the_first_row_in_screen_mode(): void
     {
         $dashboard = new RendererDashboardHarness;
-        $dashboard->width = 80;
+        $dashboard->width = 180;
         $dashboard->height = 16;
         $dashboard->frames = new Frames;
 
-        $about = Command::make('About', 'php artisan solo:about')->setDimensions(80, 16);
+        $about = Command::make('About', 'php artisan solo:about')->setDimensions(180, 16);
         $about->addLine('About output');
 
-        $logs = Command::make('Logs', 'tail -f laravel.log')->setDimensions(80, 16);
+        $logs = Command::make('Logs', 'tail -f laravel.log')->setDimensions(180, 16);
 
         $dashboard->commands = [$about, $logs];
 
@@ -38,12 +38,12 @@ class RendererTest extends Base
     public function blurred_tab_text_does_not_inherit_the_focused_tab_background(): void
     {
         $dashboard = new RendererDashboardHarness;
-        $dashboard->width = 80;
+        $dashboard->width = 180;
         $dashboard->height = 16;
         $dashboard->frames = new Frames;
 
-        $about = Command::make('About', 'php artisan solo:about')->setDimensions(80, 16);
-        $logs = Command::make('Logs', 'tail -f laravel.log')->setDimensions(80, 16);
+        $about = Command::make('About', 'php artisan solo:about')->setDimensions(180, 16);
+        $logs = Command::make('Logs', 'tail -f laravel.log')->setDimensions(180, 16);
 
         $dashboard->commands = [$about, $logs];
         $dashboard->selectedCommand = 0;
