@@ -117,10 +117,21 @@ abstract class Base extends TestCase
 
     protected function execute($actions, $closure)
     {
+        $provider = $closure ?? function () {
+            //
+        };
+
         // Pass a closure to the solo:test command so that we can
         // configure Solo in different ways for the tests.
-        $closure = new SerializableClosure($closure ?? function () {
-            //
+        $closure = new SerializableClosure(function () use ($provider) {
+            // Integration harness frame parsing expects full-frame writes.
+            // Force the string renderer so test callbacks can reliably
+            // observe complete frames.
+            \SoloTerm\Solo\Facades\Solo::setRenderer(
+                \SoloTerm\Solo\Tests\Support\StringDashboardRenderer::class
+            );
+
+            call_user_func($provider);
         });
 
         $this->process = $this->startProcess($closure);
