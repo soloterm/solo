@@ -321,7 +321,7 @@ class Dashboard extends Prompt
      */
     protected function adaptiveLoop(): void
     {
-        for (;;) {
+        for (; ;) {
             // Tick all commands to collect output (before rendering)
             foreach ($this->loopables as $component) {
                 $component->tick();

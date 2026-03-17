@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Support;
 
 use Laravel\Prompts\SuggestPrompt;
+use Laravel\Prompts\Themes\Default\SuggestPromptRenderer;
 
 class CapturedSuggestPrompt extends SuggestPrompt implements CapturedPromptInterface
 {
@@ -17,6 +18,6 @@ class CapturedSuggestPrompt extends SuggestPrompt implements CapturedPromptInter
 
     protected function rendererClass(): string
     {
-        return \Laravel\Prompts\Themes\Default\SuggestPromptRenderer::class;
+        return SuggestPromptRenderer::class;
     }
 }

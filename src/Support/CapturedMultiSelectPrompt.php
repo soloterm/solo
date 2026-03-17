@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Support;
 
 use Laravel\Prompts\MultiSelectPrompt;
+use Laravel\Prompts\Themes\Default\MultiSelectPromptRenderer;
 
 class CapturedMultiSelectPrompt extends MultiSelectPrompt implements CapturedPromptInterface
 {
@@ -17,6 +18,6 @@ class CapturedMultiSelectPrompt extends MultiSelectPrompt implements CapturedPro
 
     protected function rendererClass(): string
     {
-        return \Laravel\Prompts\Themes\Default\MultiSelectPromptRenderer::class;
+        return MultiSelectPromptRenderer::class;
     }
 }

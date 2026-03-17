@@ -9,12 +9,14 @@
 
 namespace SoloTerm\Solo\Support;
 
+use Laravel\Prompts\Themes\Default\SearchPromptRenderer;
+
 class CapturedQuickPickPrompt extends QuickPickPrompt implements CapturedPromptInterface
 {
     use CapturedPrompt;
 
     protected function rendererClass(): string
     {
-        return \Laravel\Prompts\Themes\Default\SearchPromptRenderer::class;
+        return SearchPromptRenderer::class;
     }
 }

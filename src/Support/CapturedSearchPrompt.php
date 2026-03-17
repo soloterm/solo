@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Support;
 
 use Laravel\Prompts\SearchPrompt;
+use Laravel\Prompts\Themes\Default\SearchPromptRenderer;
 
 class CapturedSearchPrompt extends SearchPrompt implements CapturedPromptInterface
 {
@@ -17,6 +18,6 @@ class CapturedSearchPrompt extends SearchPrompt implements CapturedPromptInterfa
 
     protected function rendererClass(): string
     {
-        return \Laravel\Prompts\Themes\Default\SearchPromptRenderer::class;
+        return SearchPromptRenderer::class;
     }
 }

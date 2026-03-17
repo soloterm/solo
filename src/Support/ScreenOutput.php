@@ -60,7 +60,7 @@ class ScreenOutput implements OutputInterface
     }
 
     /**
-     * @param OutputInterface::VERBOSITY_* $level
+     * @param  OutputInterface::VERBOSITY_*  $level
      */
     public function setVerbosity(int $level): void
     {
