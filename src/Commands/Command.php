@@ -456,21 +456,17 @@ class Command implements Loopable
 
         $first = array_shift($exploded);
         $indent = str_repeat(' ', $continuationIndent);
-
-        $allIndented = true;
-        foreach ($exploded as $continuationLine) {
-            $allIndented = $allIndented && str_starts_with($continuationLine, $indent);
-        }
-
-        if ($allIndented) {
-            return [$first, ...$exploded];
-        }
-
-        $rest = $indent . ltrim(implode('', $exploded));
+        $continuationWidth = max(1, $width - $continuationIndent);
+        $rest = ltrim(implode('', $exploded));
+        $continuations = explode(PHP_EOL, AnsiAware::wordwrap(
+            string: $rest,
+            width: $continuationWidth,
+            cut: true
+        ));
 
         return [
             $first,
-            ...$this->wrapLine($rest, $width, $continuationIndent, true)
+            ...array_map(fn(string $continuation): string => $indent . $continuation, $continuations)
         ];
     }
 
