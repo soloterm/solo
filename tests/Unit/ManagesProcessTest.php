@@ -226,6 +226,7 @@ class ManagesProcessTest extends Base
                 $this->childrenProcessPid = 42;
                 $this->cachedPtyDevice = '/dev/pts/3';
                 $this->cachedPtyDevicePid = 202;
+                $this->lastShutdownSignalAtMs = 1_234.0;
                 $this->partialBuffer = 'leftover';
                 $this->hadOutputThisTick = true;
             }
@@ -241,6 +242,7 @@ class ManagesProcessTest extends Base
              *     childrenProcessPid: ?int,
              *     cachedPtyDevice: ?string,
              *     cachedPtyDevicePid: ?int,
+             *     lastShutdownSignalAtMs: ?float,
              *     partialBuffer: string,
              *     hadOutputThisTick: bool
              * }
@@ -252,6 +254,7 @@ class ManagesProcessTest extends Base
                     'childrenProcessPid' => $this->childrenProcessPid,
                     'cachedPtyDevice' => $this->cachedPtyDevice,
                     'cachedPtyDevicePid' => $this->cachedPtyDevicePid,
+                    'lastShutdownSignalAtMs' => $this->lastShutdownSignalAtMs,
                     'partialBuffer' => $this->partialBuffer,
                     'hadOutputThisTick' => $this->hadOutputThisTick,
                 ];
@@ -266,9 +269,65 @@ class ManagesProcessTest extends Base
             'childrenProcessPid' => null,
             'cachedPtyDevice' => null,
             'cachedPtyDevicePid' => null,
+            'lastShutdownSignalAtMs' => null,
             'partialBuffer' => '',
             'hadOutputThisTick' => false,
         ], $command->trackingState());
+    }
+
+    #[Test]
+    public function shutdown_signal_refreshes_are_throttled_during_the_grace_period(): void
+    {
+        $command = new class extends Command
+        {
+            public float $fakeNowMs = 0;
+
+            public int $signalDispatches = 0;
+
+            public function processRunning(): bool
+            {
+                return true;
+            }
+
+            public function runMarshalProcess(): void
+            {
+                $this->marshalProcess();
+            }
+
+            protected function shutdownSignalClockMs(): float
+            {
+                return $this->fakeNowMs;
+            }
+
+            protected function sendTermSignals(bool $force = false): void
+            {
+                if (!$this->shouldDispatchShutdownSignals($force)) {
+                    return;
+                }
+
+                $this->markShutdownSignalsDispatched();
+                $this->signalDispatches++;
+            }
+        };
+
+        $command->setDimensions(100, 40);
+        $command->fakeNowMs = 1_000;
+
+        $command->stop();
+
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_100;
+        $command->runMarshalProcess();
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_249;
+        $command->runMarshalProcess();
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_250;
+        $command->runMarshalProcess();
+        $this->assertSame(2, $command->signalDispatches);
     }
 
     #[Test]

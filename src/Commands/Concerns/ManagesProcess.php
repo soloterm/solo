@@ -40,6 +40,12 @@ trait ManagesProcess
      */
     protected const MAX_BUFFER_SIZE = 10_240;
 
+    /**
+     * Minimum interval between shutdown child-process refreshes.
+     * This avoids expensive process introspection on every frame while stopping.
+     */
+    protected const SHUTDOWN_SIGNAL_REFRESH_MS = 250;
+
     public ?InvokedProcess $process = null;
 
     public string $outputStartMarker = '[[==SOLO_START==]]';
@@ -88,6 +94,11 @@ trait ManagesProcess
      * Counter for rate-limiting "Waiting..." messages.
      */
     protected int $waitingMessageCounter = 0;
+
+    /**
+     * Timestamp of the last shutdown signal refresh.
+     */
+    protected ?float $lastShutdownSignalAtMs = null;
 
     /**
      * Flag indicating output was received in the last tick.
@@ -416,7 +427,7 @@ trait ManagesProcess
         }
 
         $this->stopInitiatedAt ??= Carbon::now();
-        $this->sendTermSignals();
+        $this->sendTermSignals(force: true);
     }
 
     /**
@@ -424,13 +435,19 @@ trait ManagesProcess
      * In screen mode, avoid signalling the screen shim directly.
      * Re-enumerates children each time to catch newly spawned processes.
      */
-    protected function sendTermSignals(): void
+    protected function sendTermSignals(bool $force = false): void
     {
+        if (!$this->shouldDispatchShutdownSignals($force)) {
+            return;
+        }
+
         $pid = (int) ($this->process?->id() ?? 0);
 
         if ($pid <= 0) {
             return;
         }
+
+        $this->markShutdownSignalsDispatched();
 
         $usesScreenShim = $this->processDriver() === static::PROCESS_DRIVER_SCREEN;
 
@@ -726,6 +743,7 @@ trait ManagesProcess
         $this->resetTrackedChildren();
         $this->cachedPtyDevice = null;
         $this->cachedPtyDevicePid = null;
+        $this->lastShutdownSignalAtMs = null;
         $this->partialBuffer = '';
         $this->hadOutputThisTick = false;
     }
@@ -734,6 +752,25 @@ trait ManagesProcess
     {
         $this->children = [];
         $this->childrenProcessPid = null;
+    }
+
+    protected function shouldDispatchShutdownSignals(bool $force = false): bool
+    {
+        if ($force || $this->lastShutdownSignalAtMs === null) {
+            return true;
+        }
+
+        return ($this->shutdownSignalClockMs() - $this->lastShutdownSignalAtMs) >= static::SHUTDOWN_SIGNAL_REFRESH_MS;
+    }
+
+    protected function markShutdownSignalsDispatched(): void
+    {
+        $this->lastShutdownSignalAtMs = $this->shutdownSignalClockMs();
+    }
+
+    protected function shutdownSignalClockMs(): float
+    {
+        return microtime(true) * 1000;
     }
 
     protected function callAfterTerminateCallbacks(): void
