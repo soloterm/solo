@@ -44,7 +44,7 @@ trait ManagesProcess
      * Minimum interval between shutdown child-process refreshes.
      * This avoids expensive process introspection on every frame while stopping.
      */
-    protected const SHUTDOWN_SIGNAL_REFRESH_MS = 250;
+    protected const SHUTDOWN_SIGNAL_REFRESH_MS = 100;
 
     public ?InvokedProcess $process = null;
 
@@ -760,6 +760,10 @@ trait ManagesProcess
             return true;
         }
 
+        if ($this->needsImmediateShutdownRefresh()) {
+            return true;
+        }
+
         return ($this->shutdownSignalClockMs() - $this->lastShutdownSignalAtMs) >= static::SHUTDOWN_SIGNAL_REFRESH_MS;
     }
 
@@ -771,6 +775,12 @@ trait ManagesProcess
     protected function shutdownSignalClockMs(): float
     {
         return microtime(true) * 1000;
+    }
+
+    protected function needsImmediateShutdownRefresh(): bool
+    {
+        return $this->processDriver() === static::PROCESS_DRIVER_SCREEN
+            && $this->children === [];
     }
 
     protected function callAfterTerminateCallbacks(): void

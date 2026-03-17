@@ -294,6 +294,67 @@ class ManagesProcessTest extends Base
                 $this->marshalProcess();
             }
 
+            public function seedTrackedChildren(): void
+            {
+                $this->children = [123 => 'tail -f /tmp/demo.log'];
+            }
+
+            protected function shutdownSignalClockMs(): float
+            {
+                return $this->fakeNowMs;
+            }
+
+            protected function sendTermSignals(bool $force = false): void
+            {
+                if (!$this->shouldDispatchShutdownSignals($force)) {
+                    return;
+                }
+
+                $this->markShutdownSignalsDispatched();
+                $this->signalDispatches++;
+            }
+        };
+
+        $command->setDimensions(100, 40);
+        $command->seedTrackedChildren();
+        $command->fakeNowMs = 1_000;
+
+        $command->stop();
+
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_050;
+        $command->runMarshalProcess();
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_099;
+        $command->runMarshalProcess();
+        $this->assertSame(1, $command->signalDispatches);
+
+        $command->fakeNowMs = 1_100;
+        $command->runMarshalProcess();
+        $this->assertSame(2, $command->signalDispatches);
+    }
+
+    #[Test]
+    public function screen_shutdown_refreshes_stay_eager_until_children_have_been_discovered(): void
+    {
+        $command = new class extends Command
+        {
+            public float $fakeNowMs = 0;
+
+            public int $signalDispatches = 0;
+
+            public function processRunning(): bool
+            {
+                return true;
+            }
+
+            public function runMarshalProcess(): void
+            {
+                $this->marshalProcess();
+            }
+
             protected function shutdownSignalClockMs(): float
             {
                 return $this->fakeNowMs;
@@ -314,18 +375,9 @@ class ManagesProcessTest extends Base
         $command->fakeNowMs = 1_000;
 
         $command->stop();
-
         $this->assertSame(1, $command->signalDispatches);
 
-        $command->fakeNowMs = 1_100;
-        $command->runMarshalProcess();
-        $this->assertSame(1, $command->signalDispatches);
-
-        $command->fakeNowMs = 1_249;
-        $command->runMarshalProcess();
-        $this->assertSame(1, $command->signalDispatches);
-
-        $command->fakeNowMs = 1_250;
+        $command->fakeNowMs = 1_050;
         $command->runMarshalProcess();
         $this->assertSame(2, $command->signalDispatches);
     }
