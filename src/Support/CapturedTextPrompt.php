@@ -10,14 +10,8 @@
 namespace SoloTerm\Solo\Support;
 
 use Laravel\Prompts\TextPrompt;
-use Laravel\Prompts\Themes\Default\TextPromptRenderer;
 
 class CapturedTextPrompt extends TextPrompt implements CapturedPromptInterface
 {
     use CapturedPrompt;
-
-    protected function rendererClass(): string
-    {
-        return TextPromptRenderer::class;
-    }
 }

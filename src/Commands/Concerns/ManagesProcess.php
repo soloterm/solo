@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Commands\Concerns;
 
 use Closure;
 use Illuminate\Process\InvokedProcess;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use ReflectionClass;
@@ -27,12 +26,6 @@ use Symfony\Component\Process\Process as SymfonyProcess;
 
 trait ManagesProcess
 {
-    protected const PROCESS_DRIVER_SCREEN = 'screen';
-
-    protected const PROCESS_DRIVER_NATIVE = 'native';
-
-    protected const PROCESS_DRIVER_LEGACY = 'legacy';
-
     /**
      * Maximum buffer size before forced flush.
      * Balances memory usage, responsiveness, and UTF-8 safety.
@@ -61,10 +54,6 @@ trait ManagesProcess
     protected const WAITING_MESSAGE_INTERVAL_MS = 1_000;
 
     public ?InvokedProcess $process = null;
-
-    public string $outputStartMarker = '[[==SOLO_START==]]';
-
-    public string $outputEndMarker = '[[==SOLO_END==]]';
 
     /** @var array<int, Closure> */
     protected array $afterTerminateCallbacks = [];
@@ -121,11 +110,6 @@ trait ManagesProcess
     protected bool $hadOutputThisTick = false;
 
     /**
-     * Whether command output should be filtered by screen markers.
-     */
-    protected bool $expectsOutputMarkers = false;
-
-    /**
      * Cached reflection property for InvokedProcess::$process.
      */
     protected static ?ReflectionProperty $invokedProcessProperty = null;
@@ -135,21 +119,9 @@ trait ManagesProcess
      */
     protected static bool $invokedProcessPropertyUnavailable = false;
 
-    /**
-     * Whether the screen driver deprecation warning has already been logged.
-     */
-    protected static bool $screenDeprecationWarned = false;
-
     public function createPendingProcess(): PendingProcess
     {
         $this->input ??= new InputStream;
-
-        // Screen version checks happen in the `solo` command bootstrap.
-
-        // ??
-        // alias screen='TERM=xterm-256color screen'
-        // https://superuser.com/questions/800126/gnu-screen-changes-vim-syntax-highlighting-colors
-        // https://github.com/derailed/k9s/issues/2810
 
         $screen = $this->makeNewScreen();
 
@@ -185,32 +157,10 @@ trait ManagesProcess
     }
 
     /**
-     * @return array<int, string>|string
-     */
-    protected function buildCommandArray(Screen $screen): array|string
-    {
-        return match ($this->processDriver()) {
-            static::PROCESS_DRIVER_SCREEN => $this->buildScreenCommandArray($screen),
-            static::PROCESS_DRIVER_NATIVE => $this->buildNativeCommandArray($screen),
-            default => $this->buildLegacyCommand(),
-        };
-    }
-
-    protected function buildLegacyCommand(): string
-    {
-        // Preserve legacy no-screen behavior for backwards compatibility.
-        $this->expectsOutputMarkers = false;
-
-        return $this->command;
-    }
-
-    /**
      * @return array<int, string>
      */
-    protected function buildNativeCommandArray(Screen $screen): array
+    protected function buildCommandArray(Screen $screen): array
     {
-        $this->expectsOutputMarkers = false;
-
         $local = $this->localeEnvironmentVariables();
         $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
 
@@ -221,84 +171,6 @@ trait ManagesProcess
         ]);
 
         return ['bash', '-lc', $built];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    protected function buildScreenCommandArray(Screen $screen): array
-    {
-        $this->expectsOutputMarkers = true;
-
-        $local = $this->localeEnvironmentVariables();
-        $size = sprintf('stty cols %d rows %d', $screen->width, $screen->height);
-
-        // If there's already content in the screen then we have to do a bit of trickery. `screen` relies
-        // on absolute move codes like \e[3;1H. If we don't echo these newlines in, then the absolute
-        // moves will be wrong. We echo as many newlines as are currently present in the screen.
-
-        // We echo those *before* the outputStartMarker, so they never make it back into our Screen
-        // instance, which is correct. We also add a single line to the screen itself to make
-        // sure we're clear of the existing content.
-        if ($lines = count($this->screen->printable->buffer)) {
-            $newlines = str_repeat("\n", $lines);
-            $this->screen->write("\n");
-        } else {
-            $newlines = '';
-        }
-
-        // We have to add a 250ms delay because some commands can print so much
-        // output that screen will terminate before PHP can grab it all.
-        // 250ms seems to work, although it's totally arbitrary.
-        $inner = sprintf("printf '%%s' %s; %s; sleep 0.25; printf '%%s' %s",
-            // `screen` spams output with a bunch of ANSI codes that we want to ignore.
-            escapeshellarg($newlines . $this->outputStartMarker),
-            $this->command,
-            // `screen` prints "[screen is terminating]" along with more ANSI codes.
-            $this->outputEndMarker
-        );
-
-        $built = implode(' && ', [
-            $local,
-            $size,
-            'screen -U -q sh -c ' . escapeshellarg($inner)
-        ]);
-
-        return ['bash', '-c', $built];
-    }
-
-    protected function processDriver(): string
-    {
-        $driver = Config::get('solo.process_driver');
-
-        if (is_string($driver)) {
-            $normalized = strtolower(trim($driver));
-
-            if (in_array($normalized, [
-                static::PROCESS_DRIVER_SCREEN,
-                static::PROCESS_DRIVER_NATIVE,
-                static::PROCESS_DRIVER_LEGACY,
-            ], true)) {
-                if ($normalized === static::PROCESS_DRIVER_SCREEN && !static::$screenDeprecationWarned) {
-                    static::$screenDeprecationWarned = true;
-                    Log::warning('Solo: The "screen" process driver is deprecated and will be removed in a future release. Remove SOLO_PROCESS_DRIVER from your environment to use the native driver.');
-                }
-
-                return $normalized;
-            }
-        }
-
-        // Legacy fallback: SOLO_USE_SCREEN=true selects the (deprecated) screen driver.
-        if ((bool) Config::get('solo.use_screen', false)) {
-            if (!static::$screenDeprecationWarned) {
-                static::$screenDeprecationWarned = true;
-                Log::warning('Solo: The SOLO_USE_SCREEN option is deprecated. GNU Screen is no longer required. Remove SOLO_USE_SCREEN from your environment.');
-            }
-
-            return static::PROCESS_DRIVER_SCREEN;
-        }
-
-        return static::PROCESS_DRIVER_NATIVE;
     }
 
     protected function localeEnvironmentVariables(): string
@@ -464,7 +336,6 @@ trait ManagesProcess
 
     /**
      * Send SIGTERM to the running command process tree.
-     * In screen mode, avoid signalling the screen shim directly.
      * Re-enumerates children each time to catch newly spawned processes.
      */
     protected function sendTermSignals(bool $force = false): void
@@ -481,13 +352,8 @@ trait ManagesProcess
 
         $this->markShutdownSignalsDispatched();
 
-        $usesScreenShim = $this->processDriver() === static::PROCESS_DRIVER_SCREEN;
-
-        // In native/legacy modes, the root process is the user command (or shell wrapper)
-        // and should participate in graceful termination.
-        if (!$usesScreenShim) {
-            ProcessTracker::signal([$pid], SIGTERM);
-        }
+        // Signal the root process for graceful termination.
+        ProcessTracker::signal([$pid], SIGTERM);
 
         if ($this->childrenProcessPid !== $pid) {
             $this->resetTrackedChildren();
@@ -529,21 +395,9 @@ trait ManagesProcess
             }
         }
 
-        if (empty($this->children)) {
-            return;
+        if (!empty($this->children)) {
+            ProcessTracker::signal(array_keys($this->children), SIGTERM);
         }
-
-        $terminableChildren = [];
-
-        foreach ($this->children as $childPid => $commandSnapshot) {
-            if ($usesScreenShim && ProcessTracker::isScreenCommand($commandSnapshot)) {
-                continue;
-            }
-
-            $terminableChildren[] = $childPid;
-        }
-
-        ProcessTracker::signal($terminableChildren, SIGTERM);
     }
 
     public function restart(): void
@@ -791,10 +645,6 @@ trait ManagesProcess
             return true;
         }
 
-        if ($this->needsImmediateShutdownRefresh()) {
-            return true;
-        }
-
         return ($this->shutdownSignalClockMs() - $this->lastShutdownSignalAtMs) >= static::SHUTDOWN_SIGNAL_REFRESH_MS;
     }
 
@@ -808,12 +658,6 @@ trait ManagesProcess
         return function_exists('hrtime')
             ? hrtime(true) / 1_000_000
             : microtime(true) * 1000;
-    }
-
-    protected function needsImmediateShutdownRefresh(): bool
-    {
-        return $this->processDriver() === static::PROCESS_DRIVER_SCREEN
-            && $this->children === [];
     }
 
     protected function shutdownGracePeriodHasNotExpired(): bool

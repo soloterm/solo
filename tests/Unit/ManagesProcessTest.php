@@ -9,39 +9,12 @@ use Symfony\Component\Process\Process as SymfonyProcess;
 class ManagesProcessTest extends Base
 {
     #[Test]
-    public function commands_are_not_tokenized_when_screen_is_disabled(): void
+    public function commands_are_wrapped_with_locale_and_stty_bootstrap(): void
     {
-        config()->set('solo.use_screen', false);
-        config()->set('solo.process_driver', 'legacy');
-
         $command = new class(name: 'Tests', command: 'APP_ENV=testing php artisan test --filter="User Test"') extends Command
         {
             /**
-             * @return array<int, string>|string
-             */
-            public function build(): array|string
-            {
-                $this->setDimensions(100, 40);
-
-                return $this->buildCommandArray($this->screen);
-            }
-        };
-
-        $this->assertSame(
-            'APP_ENV=testing php artisan test --filter="User Test"',
-            $command->build()
-        );
-    }
-
-    #[Test]
-    public function native_driver_wraps_commands_with_locale_and_stty_bootstrap(): void
-    {
-        config()->set('solo.process_driver', 'native');
-
-        $command = new class(name: 'Tests', command: 'APP_ENV=testing php artisan test --filter="User Test"') extends Command
-        {
-            /**
-             * @return array{built: array<int, string>|string, width: int, height: int}
+             * @return array{built: array<int, string>, width: int, height: int}
              */
             public function buildWithDimensions(): array
             {
@@ -65,29 +38,24 @@ class ManagesProcessTest extends Base
             $result['built'][2]
         );
         $this->assertStringContainsString('exec APP_ENV=testing php artisan test --filter="User Test"', $result['built'][2]);
-        $this->assertStringNotContainsString('screen -U -q sh -c', $result['built'][2]);
     }
 
     #[Test]
-    public function native_driver_does_not_strip_marker_like_output(): void
+    public function output_passes_through_without_filtering(): void
     {
-        config()->set('solo.process_driver', 'native');
-
         $command = new Command(name: 'Demo', command: 'echo ok');
         $command->setDimensions(120, 40);
 
-        $payload = "keep {$command->outputStartMarker} and {$command->outputEndMarker} intact";
+        $payload = 'keep [[==SOLO_START==]] and [[==SOLO_END==]] intact';
         $command->addOutput($payload);
 
         $this->assertStringContainsString($payload, implode("\n", $command->wrappedLines()->all()));
     }
 
     #[Test]
-    public function native_driver_preserves_ansi_output(): void
+    public function preserves_ansi_output(): void
     {
         $this->skipUnlessPtyIsSupported();
-
-        config()->set('solo.process_driver', 'native');
 
         $ansiCommand = "php -r '\$line = trim(fgets(STDIN)); echo \"\\033[31m\" . \$line . \"\\033[0m\\n\"; usleep(200000);'";
 
@@ -123,11 +91,9 @@ class ManagesProcessTest extends Base
     }
 
     #[Test]
-    public function native_driver_supports_interactive_input_and_graceful_shutdown(): void
+    public function supports_interactive_input_and_graceful_shutdown(): void
     {
         $this->skipUnlessPtyIsSupported();
-
-        config()->set('solo.process_driver', 'native');
 
         $command = Command::from('cat')->interactive();
         $command->setDimensions(120, 40);
@@ -151,7 +117,7 @@ class ManagesProcessTest extends Base
                 usleep(20_000);
             } while (microtime(true) < $deadline);
 
-            $this->assertTrue($foundEcho, 'Native PTY command did not echo interactive input.');
+            $this->assertTrue($foundEcho, 'PTY command did not echo interactive input.');
 
             $command->stop();
 
@@ -167,7 +133,7 @@ class ManagesProcessTest extends Base
                 usleep(20_000);
             } while (microtime(true) < $deadline);
 
-            $this->assertTrue($command->processStopped(), 'Native PTY command did not stop in time.');
+            $this->assertTrue($command->processStopped(), 'PTY command did not stop in time.');
             $this->assertFalse($command->isStopping(), 'Command should leave stopping state once terminated.');
             $this->assertStringNotContainsString('Force killing!', implode("\n", $command->wrappedLines()->all()));
         } finally {
@@ -178,11 +144,9 @@ class ManagesProcessTest extends Base
     }
 
     #[Test]
-    public function native_driver_surfaces_command_not_found_errors(): void
+    public function surfaces_command_not_found_errors(): void
     {
         $this->skipUnlessPtyIsSupported();
-
-        config()->set('solo.process_driver', 'native');
 
         $missingCommand = 'solo_missing_command_' . bin2hex(random_bytes(4));
 
@@ -340,54 +304,6 @@ class ManagesProcessTest extends Base
         $this->assertSame(1, $command->signalDispatches);
 
         $command->fakeNowMs = 1_100;
-        $command->runMarshalProcess();
-        $this->assertSame(2, $command->signalDispatches);
-    }
-
-    #[Test]
-    public function screen_shutdown_refreshes_stay_eager_until_children_have_been_discovered(): void
-    {
-        config()->set('solo.process_driver', 'screen');
-
-        $command = new class extends Command
-        {
-            public float $fakeNowMs = 0;
-
-            public int $signalDispatches = 0;
-
-            public function processRunning(): bool
-            {
-                return true;
-            }
-
-            public function runMarshalProcess(): void
-            {
-                $this->marshalProcess();
-            }
-
-            protected function shutdownSignalClockMs(): float
-            {
-                return $this->fakeNowMs;
-            }
-
-            protected function sendTermSignals(bool $force = false): void
-            {
-                if (!$this->shouldDispatchShutdownSignals($force)) {
-                    return;
-                }
-
-                $this->markShutdownSignalsDispatched();
-                $this->signalDispatches++;
-            }
-        };
-
-        $command->setDimensions(100, 40);
-        $command->fakeNowMs = 1_000;
-
-        $command->stop();
-        $this->assertSame(1, $command->signalDispatches);
-
-        $command->fakeNowMs = 1_050;
         $command->runMarshalProcess();
         $this->assertSame(2, $command->signalDispatches);
     }

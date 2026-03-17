@@ -11,6 +11,14 @@ namespace SoloTerm\Solo\Support;
 
 use Exception;
 use Laravel\Prompts\Key;
+use Laravel\Prompts\MultiSelectPrompt;
+use Laravel\Prompts\SearchPrompt;
+use Laravel\Prompts\SuggestPrompt;
+use Laravel\Prompts\TextPrompt;
+use Laravel\Prompts\Themes\Default\MultiSelectPromptRenderer;
+use Laravel\Prompts\Themes\Default\SearchPromptRenderer;
+use Laravel\Prompts\Themes\Default\SuggestPromptRenderer;
+use Laravel\Prompts\Themes\Default\TextPromptRenderer;
 use ReflectionClass;
 use SoloTerm\Screen\Screen;
 
@@ -19,6 +27,18 @@ trait CapturedPrompt
     public Screen $screen;
 
     protected bool $complete = false;
+
+    /**
+     * Map of prompt base classes to their default renderers.
+     *
+     * @var array<class-string, class-string>
+     */
+    protected static array $rendererMap = [
+        TextPrompt::class => TextPromptRenderer::class,
+        SearchPrompt::class => SearchPromptRenderer::class,
+        SuggestPrompt::class => SuggestPromptRenderer::class,
+        MultiSelectPrompt::class => MultiSelectPromptRenderer::class,
+    ];
 
     public function setScreen(Screen $screen): void
     {
@@ -73,7 +93,16 @@ trait CapturedPrompt
     /**
      * @return class-string
      */
-    abstract protected function rendererClass(): string;
+    protected function rendererClass(): string
+    {
+        foreach (static::$rendererMap as $promptClass => $rendererClass) {
+            if ($this instanceof $promptClass) {
+                return $rendererClass;
+            }
+        }
+
+        throw new Exception('No renderer registered for ' . static::class);
+    }
 
     protected function getRenderer(): callable
     {

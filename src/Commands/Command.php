@@ -13,7 +13,6 @@ use Chewie\Concerns\Ticks;
 use Chewie\Contracts\Loopable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Concerns\ManagesProcess;
 use SoloTerm\Solo\Hotkeys\Hotkey;
@@ -241,11 +240,6 @@ class Command implements Loopable
 
     public function addOutput(string $text): void
     {
-        if ($this->expectsOutputMarkers) {
-            $text = Str::before($text, $this->outputEndMarker);
-            $text = Str::after($text, $this->outputStartMarker);
-        }
-
         $this->screen->write($text);
     }
 

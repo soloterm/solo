@@ -192,11 +192,6 @@ class ProcessTracker
         static::executeCommand("kill -{$signal} {$pidList} > /dev/null 2>&1");
     }
 
-    public static function isScreenCommand(string $command): bool
-    {
-        return (bool) preg_match('/^\s*screen(\s|$)/i', $command);
-    }
-
     /**
      * Check if a single process is running.
      *

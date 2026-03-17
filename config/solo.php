@@ -61,23 +61,6 @@ return [
         'Tests' => TestCommand::artisan(),
     ],
 
-    /**
-     * Process driver used to execute commands.
-     *
-     * Supported values:
-     * - native: Run directly in Solo's PTY (default, no external dependencies)
-     * - screen: Wrap commands with GNU Screen (deprecated, will be removed)
-     *
-     * You should not need to change this. The native driver handles PTY
-     * allocation, ANSI passthrough, and UTF-8 without GNU Screen.
-     */
-    'process_driver' => env('SOLO_PROCESS_DRIVER'),
-
-    /**
-     * @deprecated Use `process_driver` instead. This option will be removed in a future release.
-     */
-    'use_screen' => (bool) env('SOLO_USE_SCREEN', false),
-
     /*
     |--------------------------------------------------------------------------
     | Miscellaneous

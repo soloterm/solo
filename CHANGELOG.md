@@ -9,29 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added configurable process drivers via `solo.process_driver` (`screen` or `native`) with backward-compatible fallback to `solo.use_screen`.
-- Added regression coverage for dashboard rendering behavior, diff-render cursor anchoring, renderer reuse, process-driver command wrapping, and shutdown signaling paths.
 - Added unhandled ANSI sequence logging to surface edge cases in command output.
+- Added regression coverage for dashboard rendering behavior, diff-render cursor anchoring, renderer reuse, process-driver command wrapping, and shutdown signaling paths.
 
 ### Changed
 
-- Changed the default process driver from `screen` to `native`. GNU Screen is no longer required. Solo now uses PTY mode directly via Symfony Process, with `soloterm/screen` handling all ANSI parsing.
 - Updated dashboard rendering to prefer screen-diff output when available while preserving string-renderer fallback behavior.
 - Upgraded `soloterm/screen` to include the upstream `toCellBuffer()` ANSI decode fix and removed Solo's temporary local shim.
-
-### Deprecated
-
-- Deprecated the `screen` process driver. It will be removed in a future release. Users who explicitly set `SOLO_PROCESS_DRIVER=screen` or `SOLO_USE_SCREEN=true` will see a deprecation warning in the log.
+- Consolidated CapturedPrompt renderer mapping into the trait, eliminating per-class overrides.
 
 ### Fixed
 
 - Fixed a frame composition bug that could scroll away the first row, causing the tab strip to disappear or appear incomplete.
 - Fixed non-interactive dashboard boot crashes caused by uninitialized Laravel Prompts typed properties.
 - Fixed differential rendering artifacts by re-homing the cursor at the first changed cell in each diff frame.
-- Fixed shutdown signaling in non-screen drivers so the root process receives graceful termination.
 
 ### Removed
 
+- Removed GNU Screen process driver and all associated code. Solo now uses PTY mode directly via Symfony Process with `soloterm/screen` handling all ANSI parsing. GNU Screen is no longer required.
+- Removed `solo.process_driver` and `solo.use_screen` configuration options.
+- Removed output marker filtering (`SOLO_START`/`SOLO_END`), screen version checking, and screen-specific shutdown logic.
+- Removed unused `CapturedSearchPrompt` and `CapturedSuggestPrompt` classes.
 - Removed `EnhancedTailCommand` - it has been extracted to the standalone `soloterm/vtail` package. The default Logs command now uses a simple `tail -f` command.
 
 ## [0.3.0]

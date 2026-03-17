@@ -245,13 +245,6 @@ class ProcessTrackerTest extends Base
         $this->assertTrue($tracker::$killedGracefully);
     }
 
-    #[Test]
-    public function is_screen_command_detects_wrapper_commands_case_insensitively(): void
-    {
-        $this->assertTrue(ProcessTracker::isScreenCommand('screen -U -q sh -c "echo hi"'));
-        $this->assertTrue(ProcessTracker::isScreenCommand(' SCREEN -dmS solo')); // leading whitespace
-        $this->assertFalse(ProcessTracker::isScreenCommand('php artisan queue:work'));
-    }
 }
 
 class FakeProcessTracker extends ProcessTracker
