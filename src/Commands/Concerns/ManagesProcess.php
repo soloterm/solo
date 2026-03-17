@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Commands\Concerns;
 
 use Closure;
 use Illuminate\Process\InvokedProcess;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -46,6 +45,21 @@ trait ManagesProcess
      */
     protected const SHUTDOWN_SIGNAL_REFRESH_MS = 100;
 
+    /**
+     * Maximum time to wait for graceful shutdown before force killing.
+     */
+    protected const SHUTDOWN_GRACE_PERIOD_MS = 5_000;
+
+    /**
+     * Delay before surfacing "Waiting..." for slower shutdowns.
+     */
+    protected const WAITING_MESSAGE_DELAY_MS = 2_000;
+
+    /**
+     * Minimum interval between repeated "Waiting..." messages.
+     */
+    protected const WAITING_MESSAGE_INTERVAL_MS = 1_000;
+
     public ?InvokedProcess $process = null;
 
     public string $outputStartMarker = '[[==SOLO_START==]]';
@@ -57,7 +71,7 @@ trait ManagesProcess
 
     protected bool $stopping = false;
 
-    protected ?Carbon $stopInitiatedAt = null;
+    protected ?float $stopInitiatedAtMs = null;
 
     protected ?Closure $processModifier = null;
 
@@ -91,9 +105,9 @@ trait ManagesProcess
     protected ?int $cachedPtyDevicePid = null;
 
     /**
-     * Counter for rate-limiting "Waiting..." messages.
+     * Timestamp of the last emitted "Waiting..." message.
      */
-    protected int $waitingMessageCounter = 0;
+    protected ?float $lastWaitingMessageAtMs = null;
 
     /**
      * Timestamp of the last shutdown signal refresh.
@@ -414,7 +428,7 @@ trait ManagesProcess
     public function stop(): void
     {
         $this->stopping = true;
-        $this->waitingMessageCounter = 0;
+        $this->lastWaitingMessageAtMs = null;
 
         $this->whenStopping();
 
@@ -426,7 +440,7 @@ trait ManagesProcess
             return;
         }
 
-        $this->stopInitiatedAt ??= Carbon::now();
+        $this->stopInitiatedAtMs ??= $this->shutdownSignalClockMs();
         $this->sendTermSignals(force: true);
     }
 
@@ -692,8 +706,6 @@ trait ManagesProcess
             $trackedChildren = $this->children;
 
             $this->stopping = false;
-            $this->stopInitiatedAt = null;
-            $this->waitingMessageCounter = 0;
 
             try {
                 ProcessTracker::killMatchingCommands($trackedChildren);
@@ -719,12 +731,11 @@ trait ManagesProcess
         }
 
         // We'll give it five seconds to terminate.
-        if ($this->stopInitiatedAt->copy()->addSeconds(5)->isFuture()) {
+        if ($this->shutdownGracePeriodHasNotExpired()) {
             // Re-send SIGTERM to any new children spawned during grace period
             $this->sendTermSignals();
 
-            // Rate limit "Waiting..." messages (every ~1 second at 40 FPS)
-            if ($this->waitingMessageCounter++ % 40 === 0) {
+            if ($this->shouldEmitWaitingMessage()) {
                 $this->addLine('Waiting...');
             }
 
@@ -740,9 +751,11 @@ trait ManagesProcess
 
     protected function resetProcessTrackingState(): void
     {
+        $this->stopInitiatedAtMs = null;
         $this->resetTrackedChildren();
         $this->cachedPtyDevice = null;
         $this->cachedPtyDevicePid = null;
+        $this->lastWaitingMessageAtMs = null;
         $this->lastShutdownSignalAtMs = null;
         $this->partialBuffer = '';
         $this->hadOutputThisTick = false;
@@ -774,13 +787,43 @@ trait ManagesProcess
 
     protected function shutdownSignalClockMs(): float
     {
-        return microtime(true) * 1000;
+        return function_exists('hrtime')
+            ? hrtime(true) / 1_000_000
+            : microtime(true) * 1000;
     }
 
     protected function needsImmediateShutdownRefresh(): bool
     {
         return $this->processDriver() === static::PROCESS_DRIVER_SCREEN
             && $this->children === [];
+    }
+
+    protected function shutdownGracePeriodHasNotExpired(): bool
+    {
+        return $this->stopInitiatedAtMs !== null
+            && ($this->shutdownSignalClockMs() - $this->stopInitiatedAtMs) < static::SHUTDOWN_GRACE_PERIOD_MS;
+    }
+
+    protected function shouldEmitWaitingMessage(): bool
+    {
+        if ($this->stopInitiatedAtMs === null) {
+            return false;
+        }
+
+        $nowMs = $this->shutdownSignalClockMs();
+
+        if (($nowMs - $this->stopInitiatedAtMs) < static::WAITING_MESSAGE_DELAY_MS) {
+            return false;
+        }
+
+        if ($this->lastWaitingMessageAtMs !== null
+            && ($nowMs - $this->lastWaitingMessageAtMs) < static::WAITING_MESSAGE_INTERVAL_MS) {
+            return false;
+        }
+
+        $this->lastWaitingMessageAtMs = $nowMs;
+
+        return true;
     }
 
     protected function callAfterTerminateCallbacks(): void

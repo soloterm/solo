@@ -222,10 +222,12 @@ class ManagesProcessTest extends Base
         {
             public function seedTrackingState(): void
             {
+                $this->stopInitiatedAtMs = 999.0;
                 $this->children = [101 => 'tail -f /tmp/demo.log'];
                 $this->childrenProcessPid = 42;
                 $this->cachedPtyDevice = '/dev/pts/3';
                 $this->cachedPtyDevicePid = 202;
+                $this->lastWaitingMessageAtMs = 1_111.0;
                 $this->lastShutdownSignalAtMs = 1_234.0;
                 $this->partialBuffer = 'leftover';
                 $this->hadOutputThisTick = true;
@@ -238,10 +240,12 @@ class ManagesProcessTest extends Base
 
             /**
              * @return array{
+             *     stopInitiatedAtMs: ?float,
              *     children: array<int, string>,
              *     childrenProcessPid: ?int,
              *     cachedPtyDevice: ?string,
              *     cachedPtyDevicePid: ?int,
+             *     lastWaitingMessageAtMs: ?float,
              *     lastShutdownSignalAtMs: ?float,
              *     partialBuffer: string,
              *     hadOutputThisTick: bool
@@ -250,10 +254,12 @@ class ManagesProcessTest extends Base
             public function trackingState(): array
             {
                 return [
+                    'stopInitiatedAtMs' => $this->stopInitiatedAtMs,
                     'children' => $this->children,
                     'childrenProcessPid' => $this->childrenProcessPid,
                     'cachedPtyDevice' => $this->cachedPtyDevice,
                     'cachedPtyDevicePid' => $this->cachedPtyDevicePid,
+                    'lastWaitingMessageAtMs' => $this->lastWaitingMessageAtMs,
                     'lastShutdownSignalAtMs' => $this->lastShutdownSignalAtMs,
                     'partialBuffer' => $this->partialBuffer,
                     'hadOutputThisTick' => $this->hadOutputThisTick,
@@ -265,10 +271,12 @@ class ManagesProcessTest extends Base
         $command->resetTrackingStateForTest();
 
         $this->assertSame([
+            'stopInitiatedAtMs' => null,
             'children' => [],
             'childrenProcessPid' => null,
             'cachedPtyDevice' => null,
             'cachedPtyDevicePid' => null,
+            'lastWaitingMessageAtMs' => null,
             'lastShutdownSignalAtMs' => null,
             'partialBuffer' => '',
             'hadOutputThisTick' => false,
@@ -380,6 +388,51 @@ class ManagesProcessTest extends Base
         $command->fakeNowMs = 1_050;
         $command->runMarshalProcess();
         $this->assertSame(2, $command->signalDispatches);
+    }
+
+    #[Test]
+    public function waiting_messages_are_delayed_for_quick_shutdowns(): void
+    {
+        $command = new class extends Command
+        {
+            public float $fakeNowMs = 0;
+
+            public function processRunning(): bool
+            {
+                return true;
+            }
+
+            public function runMarshalProcess(): void
+            {
+                $this->marshalProcess();
+            }
+
+            protected function shutdownSignalClockMs(): float
+            {
+                return $this->fakeNowMs;
+            }
+
+            protected function sendTermSignals(bool $force = false): void
+            {
+                if (!$this->shouldDispatchShutdownSignals($force)) {
+                    return;
+                }
+
+                $this->markShutdownSignalsDispatched();
+            }
+        };
+
+        $command->setDimensions(100, 40);
+        $command->fakeNowMs = 1_000;
+        $command->stop();
+
+        $command->fakeNowMs = 2_999;
+        $command->runMarshalProcess();
+        $this->assertStringNotContainsString('Waiting...', implode("\n", $command->wrappedLines()->all()));
+
+        $command->fakeNowMs = 3_000;
+        $command->runMarshalProcess();
+        $this->assertStringContainsString('Waiting...', implode("\n", $command->wrappedLines()->all()));
     }
 
     #[Test]
