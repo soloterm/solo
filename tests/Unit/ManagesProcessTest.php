@@ -30,7 +30,6 @@ class ManagesProcessTest extends Base
 
         $result = $command->buildWithDimensions();
 
-        $this->assertIsArray($result['built']);
         $this->assertSame('bash', $result['built'][0]);
         $this->assertSame('-lc', $result['built'][1]);
         $this->assertStringContainsString(
