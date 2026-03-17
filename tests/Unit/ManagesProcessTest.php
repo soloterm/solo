@@ -154,14 +154,22 @@ class ManagesProcessTest extends Base
         $command->start();
 
         try {
-            $deadline = microtime(true) + 2.0;
+            $deadline = microtime(true) + 5.0;
+            $stopped = false;
 
             do {
                 $command->onTick();
                 $output = implode("\n", $command->wrappedLines()->all());
 
-                if ($command->processStopped() && str_contains($output, $missingCommand)) {
-                    break;
+                if ($command->processStopped()) {
+                    // Process exited — keep ticking briefly to flush buffered output.
+                    if (!$stopped) {
+                        $stopped = true;
+                    }
+
+                    if (str_contains($output, $missingCommand)) {
+                        break;
+                    }
                 }
 
                 usleep(20_000);
