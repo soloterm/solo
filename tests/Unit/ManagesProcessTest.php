@@ -31,7 +31,7 @@ class ManagesProcessTest extends Base
         $result = $command->buildWithDimensions();
 
         $this->assertSame('bash', $result['built'][0]);
-        $this->assertSame('-lc', $result['built'][1]);
+        $this->assertSame('-c', $result['built'][1]);
         $this->assertStringContainsString(
             sprintf('stty cols %d rows %d', $result['width'], $result['height']),
             $result['built'][2]

@@ -269,11 +269,13 @@ class Dashboard extends Prompt
         }
 
         $this->currentCommand()->setMode(Command::MODE_INTERACTIVE);
+        $this->diffRenderer?->invalidate();
     }
 
     public function exitInteractiveMode(): void
     {
         $this->currentCommand()->setMode(Command::MODE_PASSIVE);
+        $this->diffRenderer?->invalidate();
     }
 
     public function selectTab(int $index): void

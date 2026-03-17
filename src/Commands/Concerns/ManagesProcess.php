@@ -170,7 +170,7 @@ trait ManagesProcess
             'exec ' . $this->command,
         ]);
 
-        return ['bash', '-lc', $built];
+        return ['bash', '-c', $built];
     }
 
     protected function localeEnvironmentVariables(): string
