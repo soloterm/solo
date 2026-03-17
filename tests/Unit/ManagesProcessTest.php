@@ -12,7 +12,7 @@ class ManagesProcessTest extends Base
     public function commands_are_not_tokenized_when_screen_is_disabled(): void
     {
         config()->set('solo.use_screen', false);
-        config()->set('solo.process_driver', null);
+        config()->set('solo.process_driver', 'legacy');
 
         $command = new class(name: 'Tests', command: 'APP_ENV=testing php artisan test --filter="User Test"') extends Command
         {
@@ -347,6 +347,8 @@ class ManagesProcessTest extends Base
     #[Test]
     public function screen_shutdown_refreshes_stay_eager_until_children_have_been_discovered(): void
     {
+        config()->set('solo.process_driver', 'screen');
+
         $command = new class extends Command
         {
             public float $fakeNowMs = 0;

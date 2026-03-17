@@ -61,13 +61,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | GNU Screen
-    |--------------------------------------------------------------------------
-    */
-    'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
-
-    /*
-    |--------------------------------------------------------------------------
     | Dump Server
     |--------------------------------------------------------------------------
     */
@@ -126,14 +119,6 @@ Available keybinding presets. Add your own custom keybinding classes here. See [
 
 The commands that appear as tabs in Solo. The array key becomes the tab name. See [Commands](commands) for all the ways to define commands.
 
-### use_screen
-
-```php
-'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
-```
-
-Whether to use GNU Screen as a wrapper for commands. Screen provides proper PTY allocation and better ANSI rendering. Disable if Screen isn't installed or causes issues.
-
 ### dump_server_host
 
 ```php
@@ -152,9 +137,6 @@ SOLO_THEME=dark
 
 # Keybindings
 SOLO_KEYBINDING=vim
-
-# GNU Screen
-SOLO_USE_SCREEN=true
 
 # Dump server
 SOLO_DUMP_SERVER_HOST=tcp://127.0.0.1:9984

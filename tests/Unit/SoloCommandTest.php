@@ -52,7 +52,13 @@ SH, function (): void {
             $command->runScreenVersionCheckForTest();
         });
 
+        $deprecationWarning = [
+            'level' => 'warning',
+            'message' => 'Solo: The GNU Screen process driver is deprecated and will be removed in a future release. The native driver is now the default and does not require GNU Screen.',
+        ];
+
         $this->assertSame([
+            $deprecationWarning,
             [
                 'level' => 'error',
                 'message' => 'The installed version of `screen` (4.9.0) is outdated. Please upgrade to 5.0.0 or greater for best compatibility with Solo.',
@@ -82,7 +88,13 @@ SH, function (): void {
             $command->runScreenVersionCheckForTest();
         });
 
+        $deprecationWarning = [
+            'level' => 'warning',
+            'message' => 'Solo: The GNU Screen process driver is deprecated and will be removed in a future release. The native driver is now the default and does not require GNU Screen.',
+        ];
+
         $this->assertSame([
+            $deprecationWarning,
             [
                 'level' => 'error',
                 'message' => 'Unable to determine `screen` version. Make sure `screen` is installed.',

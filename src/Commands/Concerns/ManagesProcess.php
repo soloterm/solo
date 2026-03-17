@@ -135,6 +135,11 @@ trait ManagesProcess
      */
     protected static bool $invokedProcessPropertyUnavailable = false;
 
+    /**
+     * Whether the screen driver deprecation warning has already been logged.
+     */
+    protected static bool $screenDeprecationWarned = false;
+
     public function createPendingProcess(): PendingProcess
     {
         $this->input ??= new InputStream;
@@ -274,13 +279,26 @@ trait ManagesProcess
                 static::PROCESS_DRIVER_NATIVE,
                 static::PROCESS_DRIVER_LEGACY,
             ], true)) {
+                if ($normalized === static::PROCESS_DRIVER_SCREEN && !static::$screenDeprecationWarned) {
+                    static::$screenDeprecationWarned = true;
+                    Log::warning('Solo: The "screen" process driver is deprecated and will be removed in a future release. Remove SOLO_PROCESS_DRIVER from your environment to use the native driver.');
+                }
+
                 return $normalized;
             }
         }
 
-        return (bool) Config::get('solo.use_screen', true)
-            ? static::PROCESS_DRIVER_SCREEN
-            : static::PROCESS_DRIVER_LEGACY;
+        // Legacy fallback: SOLO_USE_SCREEN=true selects the (deprecated) screen driver.
+        if ((bool) Config::get('solo.use_screen', false)) {
+            if (!static::$screenDeprecationWarned) {
+                static::$screenDeprecationWarned = true;
+                Log::warning('Solo: The SOLO_USE_SCREEN option is deprecated. GNU Screen is no longer required. Remove SOLO_USE_SCREEN from your environment.');
+            }
+
+            return static::PROCESS_DRIVER_SCREEN;
+        }
+
+        return static::PROCESS_DRIVER_NATIVE;
     }
 
     protected function localeEnvironmentVariables(): string

@@ -65,18 +65,18 @@ return [
      * Process driver used to execute commands.
      *
      * Supported values:
-     * - screen: Wrap commands with GNU Screen (default behavior)
-     * - native: Run directly in Solo's PTY with locale + stty bootstrap
+     * - native: Run directly in Solo's PTY (default, no external dependencies)
+     * - screen: Wrap commands with GNU Screen (deprecated, will be removed)
      *
-     * Leave unset to keep legacy `use_screen` behavior.
+     * You should not need to change this. The native driver handles PTY
+     * allocation, ANSI passthrough, and UTF-8 without GNU Screen.
      */
     'process_driver' => env('SOLO_PROCESS_DRIVER'),
 
     /**
-     * Backwards-compatible fallback for projects that still use SOLO_USE_SCREEN.
-     * Prefer `process_driver` for new setups.
+     * @deprecated Use `process_driver` instead. This option will be removed in a future release.
      */
-    'use_screen' => (bool) env('SOLO_USE_SCREEN', true),
+    'use_screen' => (bool) env('SOLO_USE_SCREEN', false),
 
     /*
     |--------------------------------------------------------------------------

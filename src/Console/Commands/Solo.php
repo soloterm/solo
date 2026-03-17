@@ -35,6 +35,8 @@ class Solo extends Command
             return;
         }
 
+        Log::warning('Solo: The GNU Screen process driver is deprecated and will be removed in a future release. The native driver is now the default and does not require GNU Screen.');
+
         $process = new Process(['screen', '-v']);
         $process->run();
 
@@ -61,7 +63,7 @@ class Solo extends Command
             return strtolower(trim($driver)) === 'screen';
         }
 
-        return (bool) Config::get('solo.use_screen', true);
+        return (bool) Config::get('solo.use_screen', false);
     }
 
     protected function monitor(): void

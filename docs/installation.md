@@ -18,30 +18,6 @@ description: How to install and set up Solo in your Laravel application.
 
 Solo requires `ext-pcntl` and `ext-posix` for process management. These extensions are not available on Windows. If you're on Windows, consider using WSL2.
 
-### GNU Screen (Recommended)
-
-Solo works best with GNU Screen 5.0.0 or higher installed. Screen provides proper PTY allocation and improves ANSI rendering.
-
-Check if Screen is installed:
-
-```bash
-screen --version
-```
-
-Install on macOS:
-
-```bash
-brew install screen
-```
-
-Install on Ubuntu/Debian:
-
-```bash
-sudo apt install screen
-```
-
-Solo will work without Screen, but you may experience degraded output in some commands.
-
 ## Install via Composer
 
 Install Solo as a development dependency:
@@ -109,7 +85,7 @@ Solo respects these environment variables:
 |----------|---------|-------------|
 | `SOLO_THEME` | `dark` | Theme to use (light or dark) |
 | `SOLO_KEYBINDING` | `default` | Keybinding preset |
-| `SOLO_USE_SCREEN` | `true` | Use GNU Screen wrapper |
+| `SOLO_PROCESS_DRIVER` | `native` | Process driver (`native` or `screen`) |
 | `SOLO_DUMP_SERVER_HOST` | `tcp://127.0.0.1:9984` | Dump server address |
 
 ## Troubleshooting
@@ -128,21 +104,6 @@ composer dump-autoload
 1. Test the command outside of Solo first
 2. Check if the command has an `--ansi` or `--colors=always` option
 3. Verify the command writes to STDOUT
-
-### Screen-related issues
-
-If you experience rendering problems:
-
-```bash
-# Disable Screen wrapper
-SOLO_USE_SCREEN=false php artisan solo
-```
-
-Or in your `.env`:
-
-```env
-SOLO_USE_SCREEN=false
-```
 
 ### Port conflicts
 

@@ -61,8 +61,8 @@ Each command runs as a subprocess managed by the `ManagesProcess` trait.
 
 When a command starts:
 
-1. A new process is spawned with `proc_open()`
-2. If GNU Screen is available, the command is wrapped for proper PTY handling
+1. A new process is spawned with `proc_open()` using PTY mode
+2. The command runs in a login shell with locale and terminal size bootstrap
 3. Non-blocking I/O is configured for output collection
 
 ### Output Collection
@@ -131,26 +131,6 @@ public function hasNewOutput(): bool
 ```
 
 This reduces terminal I/O by ~99.5% for typical workloads.
-
-## GNU Screen Wrapper
-
-Solo wraps commands in GNU Screen for:
-
-- **PTY allocation** - Proper terminal emulation
-- **ANSI rendering** - Better color and formatting support
-- **Size handling** - Correct terminal dimensions
-
-The wrapper command:
-
-```bash
-screen -U -q sh -c "your-command"
-```
-
-Disable if Screen isn't available:
-
-```env
-SOLO_USE_SCREEN=false
-```
 
 ## Key Components
 

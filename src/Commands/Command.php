@@ -12,6 +12,7 @@ namespace SoloTerm\Solo\Commands;
 use Chewie\Concerns\Ticks;
 use Chewie\Contracts\Loopable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use SoloTerm\Screen\Screen;
 use SoloTerm\Solo\Commands\Concerns\ManagesProcess;
@@ -423,6 +424,13 @@ class Command implements Loopable
             width: $this->scrollPaneWidth(),
             height: $this->scrollPaneHeight()
         );
+
+        $screen->reportUnhandledSequencesVia(function (string $sequence) {
+            Log::debug('Solo: Unhandled ANSI sequence in command output', [
+                'command' => $this->name,
+                'sequence' => addcslashes($sequence, "\x00..\x1f\x7f..\xff"),
+            ]);
+        });
 
         return $screen->respondToQueriesVia(function ($output) {
             $this->input->write($output);
