@@ -63,6 +63,9 @@ abstract class Popup
 
     public function render(int $offsetX = 0, int $offsetY = 0)
     {
+        $offsetX = max(0, $offsetX);
+        $offsetY = max(0, $offsetY);
+
         $output = $this->output();
 
         $rendered = "\e[H\e[{$offsetY}B"

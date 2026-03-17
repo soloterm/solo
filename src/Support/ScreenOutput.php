@@ -25,6 +25,7 @@ class ScreenOutput implements OutputInterface
     public function __construct(public Screen $screen)
     {
         $this->formatter = new OutputFormatter;
+        $this->formatter->setDecorated($this->decorated);
     }
 
     public function output()
@@ -34,8 +35,13 @@ class ScreenOutput implements OutputInterface
 
     public function write(iterable|string $messages, bool $newline = false, int $options = 0): void
     {
-        if (is_iterable($messages)) {
-            $messages = implode('', $messages);
+        $messages = $this->normalizeMessages($messages);
+        $messages = $this->formatOutput($messages, $options);
+
+        if ($newline) {
+            $this->screen->writeln($messages);
+
+            return;
         }
 
         $this->screen->write($messages);
@@ -43,11 +49,7 @@ class ScreenOutput implements OutputInterface
 
     public function writeln(iterable|string $messages, int $options = 0): void
     {
-        if (is_iterable($messages)) {
-            $messages = implode('', $messages);
-        }
-
-        $this->screen->writeln($messages);
+        $this->write($messages, true, $options);
     }
 
     public function setVerbosity(int $level): void
@@ -88,6 +90,7 @@ class ScreenOutput implements OutputInterface
     public function setDecorated(bool $decorated): void
     {
         $this->decorated = $decorated;
+        $this->formatter->setDecorated($decorated);
     }
 
     public function isDecorated(): bool
@@ -98,10 +101,33 @@ class ScreenOutput implements OutputInterface
     public function setFormatter(OutputFormatterInterface $formatter): void
     {
         $this->formatter = $formatter;
+        $this->formatter->setDecorated($this->decorated);
     }
 
     public function getFormatter(): OutputFormatterInterface
     {
         return $this->formatter;
+    }
+
+    protected function normalizeMessages(iterable|string $messages): string
+    {
+        if (is_iterable($messages)) {
+            return implode('', [...$messages]);
+        }
+
+        return $messages;
+    }
+
+    protected function formatOutput(string $message, int $options): string
+    {
+        $outputType = $options & (OutputInterface::OUTPUT_NORMAL | OutputInterface::OUTPUT_RAW | OutputInterface::OUTPUT_PLAIN);
+
+        $outputType = $outputType === 0 ? OutputInterface::OUTPUT_NORMAL : $outputType;
+
+        return match ($outputType) {
+            OutputInterface::OUTPUT_RAW => $message,
+            OutputInterface::OUTPUT_PLAIN => strip_tags($this->formatter->format($message)),
+            default => $this->formatter->format($message),
+        };
     }
 }

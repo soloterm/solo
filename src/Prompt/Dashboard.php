@@ -143,7 +143,7 @@ class Dashboard extends Prompt
     public function listenForEvents()
     {
         Solo::on(Event::ActivateTab, function (string $name) {
-            foreach (Solo::commands() as $i => $command) {
+            foreach ($this->commands as $i => $command) {
                 if ($command->name === $name) {
                     $this->selectTab($i);
                     break;
@@ -154,6 +154,10 @@ class Dashboard extends Prompt
 
     public function listenForSignals()
     {
+        if (function_exists('pcntl_async_signals')) {
+            pcntl_async_signals(true);
+        }
+
         pcntl_signal(SIGWINCH, [$this, 'handleResize']);
 
         pcntl_signal(SIGINT, [$this, 'quit']);
@@ -270,9 +274,20 @@ class Dashboard extends Prompt
 
     public function selectTab(int $index)
     {
-        $this->currentCommand()->blur();
+        $total = count($this->commands);
+
+        if ($total === 0) {
+            return;
+        }
+
+        $index = max(0, min($index, $total - 1));
+
+        if (isset($this->commands[$this->selectedCommand])) {
+            $this->commands[$this->selectedCommand]->blur();
+        }
+
         $this->selectedCommand = $index;
-        $this->currentCommand()->focus();
+        $this->commands[$this->selectedCommand]->focus();
     }
 
     public function nextTab()

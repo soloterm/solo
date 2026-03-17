@@ -160,7 +160,7 @@ class Renderer extends PromptsRenderer
         $screen = $plain;
 
         // @TODO make the width configurable / determined by the popup itself.
-        $offset = ($this->width - 80) / 2;
+        $offset = max(0, (int) floor(($this->width - 80) / 2));
         $screen->write($popup->render($offset, 2));
 
         return $screen;
@@ -179,6 +179,10 @@ class Renderer extends PromptsRenderer
         // Find the index of the focused tab.
         $focused = $tabs->pluck('focused')->search(value: true, strict: true);
 
+        if ($focused === false) {
+            $focused = max(0, min($this->dashboard->selectedCommand, max(0, $tabs->count() - 1)));
+        }
+
         // Pass it through to figure out what all the visible
         // tabs should be, based on our available width.
         [$start, $end] = $this->calculateVisibleTabs($tabs, $focused, $this->width);
@@ -187,7 +191,7 @@ class Renderer extends PromptsRenderer
         // received back, then add the styling.
         $selectedTabs = $tabs
             ->slice($start, $end - $start + 1)
-            ->map(fn($tab) => $this->styleTab($tab['command'], $tab['display']))
+            ->map(fn($tab) => $this->styleTab($tab['command'], $tab['display'], $tab['focused']))
             ->implode(' ');
 
         // Some tabs on the left side weren't able to be
@@ -197,7 +201,7 @@ class Renderer extends PromptsRenderer
             // one digit we pad the full string to 6 characters to prevent jumpiness
             // and so we can reliably use 6 in the calculateVisibleTabs method.
             $more = $this->theme->tabMore(
-                mb_str_pad("(← $start)", 6, ' ', STR_PAD_RIGHT)
+                $this->mbStrPad("(← $start)", 6, ' ', STR_PAD_RIGHT)
             );
 
             $selectedTabs = "{$more}{$selectedTabs}";
@@ -206,7 +210,7 @@ class Renderer extends PromptsRenderer
         // We're missing some tabs on the right side, so show an indicator.
         if ($end < $tabs->count() - 1) {
             // Same deal as above about padding to 6.
-            $more = mb_str_pad('(' . ($tabs->count() - 1 - $end) . ' →)', 6, ' ', STR_PAD_LEFT);
+            $more = $this->mbStrPad('(' . ($tabs->count() - 1 - $end) . ' →)', 6, ' ', STR_PAD_LEFT);
 
             // How much space do we have left?
             $remaining = $this->width - mb_strlen(Util::stripEscapeSequences($selectedTabs)) - mb_strlen($more);
@@ -217,7 +221,7 @@ class Renderer extends PromptsRenderer
                 $peek = $tabs->get($end + 1);
                 $truncated = $this->truncate($peek['display'], $remaining - 1) . ' ';
 
-                $peek = $this->styleTab($peek['command'], $truncated);
+                $peek = $this->styleTab($peek['command'], $truncated, $peek['focused']);
             } else {
                 // Otherwise just show some spaces
                 $peek = str_repeat(' ', max($remaining, 0));
@@ -229,13 +233,15 @@ class Renderer extends PromptsRenderer
         $this->line($selectedTabs);
     }
 
-    protected function styleTab(Command $command, string $name): string
+    protected function styleTab(Command $command, string $name, ?bool $focused = null): string
     {
         $state = $command->processRunning()
             ? ($command->paused ? 'paused' : 'running')
             : 'stopped';
 
-        return $command->isFocused() ? $this->theme->tabFocused($name, $state) : $this->theme->tabBlurred($name, $state);
+        $isFocused = $focused ?? $command->isFocused();
+
+        return $isFocused ? $this->theme->tabFocused($name, $state) : $this->theme->tabBlurred($name, $state);
     }
 
     protected function renderProcessState(): void
@@ -312,7 +318,7 @@ class Renderer extends PromptsRenderer
         // effect, depending on how much content there is.
         $scrolled = $this->scrollbar(
             // Subtract 1 for the left box border and 1 for the space after it.
-            $visible, $start, $allowedLines, $totalLines, $this->width - 2
+            $visible, $start, $allowedLines, $totalLines, max(1, $this->width - 2)
         );
 
         // If this conditional is true then it means that there wasn't
@@ -339,7 +345,7 @@ class Renderer extends PromptsRenderer
         // Box bottom border
         $this->line(
             $this->colorBox(
-                $this->box('╰') . str_repeat($this->box('─'), $this->width - 2) . $this->box('╯')
+                $this->box('╰') . str_repeat($this->box('─'), max(0, $this->width - 2)) . $this->box('╯')
             )
         );
     }
@@ -358,17 +364,19 @@ class Renderer extends PromptsRenderer
 
         $stateTreatment = $this->currentCommand->paused ? 'logsPaused' : 'logsLive';
 
+        $filler = max(0,
+            $this->width
+            // 5 hardcoded border pieces, 3 hardcoded spaces
+            - 5 - 3
+            - mb_strlen($state) - mb_strlen($count) - mb_strlen($interactive)
+        );
+
         $border = ''
             . $this->coloredBox('╭')
             . $this->coloredBox('─')
             . $this->bgCyan($interactive)
             . $this->coloredBox('─')
-            . $this->colorBox(str_repeat($this->box('─'),
-                $this->width
-                // 5 hardcoded border pieces, 3 hardcoded spaces
-                - 5 - 3
-                - strlen($state) - strlen($count) - strlen($interactive)
-            ))
+            . $this->colorBox(str_repeat($this->box('─'), $filler))
             . ' '
             . $this->theme->dim($count)
             . ' '
@@ -436,7 +444,7 @@ class Renderer extends PromptsRenderer
             // We use gray('│') because that's what the scrollbar
             // method does. We'll customize it further down.
             // (3 = 1 left bar + 1 space + 1 right bar.)
-            return $this->pad($line, $this->width - 3) . $this->scrollbarTrack;
+            return $this->pad($line, max(0, $this->width - 3)) . $this->scrollbarTrack;
         }, $scrolled);
     }
 
@@ -578,6 +586,46 @@ class Renderer extends PromptsRenderer
         }
 
         return substr($subject, 0, $position) . $replace . substr($subject, $position + strlen($search));
+    }
+
+    protected function mbStrPad(string $string, int $length, string $pad = ' ', int $padType = STR_PAD_RIGHT): string
+    {
+        if (function_exists('mb_str_pad')) {
+            return mb_str_pad($string, $length, $pad, $padType);
+        }
+
+        $stringLength = mb_strlen($string);
+
+        if ($stringLength >= $length || $pad === '') {
+            return $string;
+        }
+
+        $padLength = $length - $stringLength;
+
+        [$left, $right] = match ($padType) {
+            STR_PAD_LEFT => [$padLength, 0],
+            STR_PAD_BOTH => [intdiv($padLength, 2), $padLength - intdiv($padLength, 2)],
+            default => [0, $padLength],
+        };
+
+        return $this->mbPadRepeat($pad, $left) . $string . $this->mbPadRepeat($pad, $right);
+    }
+
+    protected function mbPadRepeat(string $pad, int $length): string
+    {
+        if ($length <= 0 || $pad === '') {
+            return '';
+        }
+
+        $padLength = mb_strlen($pad);
+
+        if ($padLength === 0) {
+            return '';
+        }
+
+        $repeated = str_repeat($pad, (int) ceil($length / $padLength));
+
+        return mb_substr($repeated, 0, $length);
     }
 }
 

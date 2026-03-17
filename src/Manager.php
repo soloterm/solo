@@ -143,7 +143,9 @@ class Manager
 
     public function loadCommands(): static
     {
-        $this->addCommands(config('solo.commands'));
+        $this->addCommands(
+            $this->getArrayConfigValue('solo.commands', [])
+        );
 
         return $this;
     }
@@ -164,8 +166,8 @@ class Manager
      */
     public function hotkeys(): array
     {
-        $bindings = $this->getConfigValue('solo.keybindings', []);
-        $binding = $this->getConfigValue('solo.keybinding', 'default');
+        $bindings = $this->getArrayConfigValue('solo.keybindings', []);
+        $binding = $this->getStringConfigValue('solo.keybinding', 'default');
 
         $hotkeys = Arr::get($bindings, $binding, DefaultHotkeys::class);
 
@@ -182,8 +184,8 @@ class Manager
             return $this->cachedTheme;
         }
 
-        $theme = $this->getConfigValue('solo.theme', 'light');
-        $themes = $this->getConfigValue('solo.themes', [
+        $theme = $this->getStringConfigValue('solo.theme', 'light');
+        $themes = $this->getArrayConfigValue('solo.themes', [
             'light' => LightTheme::class,
         ]);
 
@@ -196,7 +198,7 @@ class Manager
         $reflected = new ReflectionClass($theme);
 
         if (!$reflected->implementsInterface(Theme::class)) {
-            throw new InvalidArgumentException("Theme class '{$theme}' must implement the SoloTheme interface.");
+            throw new InvalidArgumentException("Theme class '{$theme}' must implement the " . Theme::class . ' interface.');
         }
 
         if ($reflected->isAbstract()) {
@@ -222,11 +224,24 @@ class Manager
         return $this->renderer;
     }
 
-    private function getConfigValue(string $key, $default = null)
+    private function getArrayConfigValue(string $key, array $default = []): array
     {
         $value = Config::get($key, $default);
 
-        if (gettype($value) !== gettype($default)) {
+        if (!is_array($value)) {
+            throw new InvalidArgumentException(
+                sprintf('Configuration value for key [%s] must be an array, %s given.', $key, gettype($value))
+            );
+        }
+
+        return $value;
+    }
+
+    private function getStringConfigValue(string $key, string $default = ''): string
+    {
+        $value = Config::get($key, $default);
+
+        if (!is_string($value)) {
             throw new InvalidArgumentException(
                 sprintf('Configuration value for key [%s] must be a string, %s given.', $key, gettype($value))
             );

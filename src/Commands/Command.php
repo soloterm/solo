@@ -352,13 +352,13 @@ class Command implements Loopable
         $hotkeys = (count($this->allHotkeys()) || $this->canBeInteractive()) ? 1 : 0;
 
         // 5 = 1 tabs + 1 process + 1 top border + 1 bottom border + 1 global hotkeys
-        return $this->height - 5 - $hotkeys;
+        return max(1, $this->height - 5 - $hotkeys);
     }
 
     public function scrollPaneWidth(): int
     {
         // 2 box borders + 2 spaces for padding.
-        return $this->width - 4;
+        return max(1, $this->width - 4);
     }
 
     public function wrappedLines(): Collection

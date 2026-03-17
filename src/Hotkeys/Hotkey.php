@@ -11,7 +11,9 @@ namespace SoloTerm\Solo\Hotkeys;
 
 use Closure;
 use ReflectionFunction;
+use ReflectionNamedType;
 use ReflectionParameter;
+use ReflectionUnionType;
 use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Prompt\Dashboard;
 use SoloTerm\Solo\Support\KeyPressListener;
@@ -153,15 +155,40 @@ class Hotkey
         $reflected->getParameters();
         $arguments = collect($reflected->getParameters())
             ->map(function (ReflectionParameter $parameter) {
-                return match ($parameter->getType()->getName()) {
-                    Command::class => $this->command,
-                    Dashboard::class => $this->prompt,
-                    KeyPressListener::class => $this->prompt->listener,
-                    Hotkey::class => $this,
-                    default => null
-                };
+                $type = $parameter->getType();
+
+                if ($type instanceof ReflectionNamedType) {
+                    return $this->resolveReflectedType($type->getName());
+                }
+
+                if ($type instanceof ReflectionUnionType) {
+                    foreach ($type->getTypes() as $namedType) {
+                        if (!$namedType instanceof ReflectionNamedType || $namedType->isBuiltin()) {
+                            continue;
+                        }
+
+                        $resolved = $this->resolveReflectedType($namedType->getName());
+
+                        if (!is_null($resolved)) {
+                            return $resolved;
+                        }
+                    }
+                }
+
+                return null;
             });
 
         return call_user_func($value, ...$arguments->all());
+    }
+
+    protected function resolveReflectedType(string $type): mixed
+    {
+        return match ($type) {
+            Command::class => $this->command,
+            Dashboard::class => $this->prompt,
+            KeyPressListener::class => $this->prompt->listener,
+            Hotkey::class => $this,
+            default => null,
+        };
     }
 }

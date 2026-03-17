@@ -112,9 +112,7 @@ trait ManagesProcess
     {
         $this->input ??= new InputStream;
 
-        // Resources about screen version needing to be 5.0.0
-        // @TODO add a check on startup to see what version `screen` they are using
-        // https://chatgpt.com/share/67b7b74e-3db8-8011-9e2b-79deb71eb12d
+        // Screen version checks happen in the `solo` command bootstrap.
 
         // ??
         // alias screen='TERM=xterm-256color screen'
