@@ -38,16 +38,19 @@ class Solo extends Command
         $process = new Process(['screen', '-v']);
         $process->run();
 
-        if ($process->isSuccessful()) {
-            preg_match('/Screen version ([\d.]+)/', $process->getOutput(), $matches);
+        $screenOutput = trim($process->getOutput() . "\n" . $process->getErrorOutput());
 
-            if (!empty($matches[1]) && version_compare($matches[1], '5.0.0', '<')) {
+        preg_match('/Screen version ([\d.]+)/', $screenOutput, $matches);
+
+        if (!empty($matches[1])) {
+            if (version_compare($matches[1], '5.0.0', '<')) {
                 Log::error("The installed version of `screen` ({$matches[1]}) is outdated. Please upgrade to 5.0.0 or greater for best compatibility with Solo.");
             }
-        } else {
-            Log::error('Unable to determine `screen` version. Make sure `screen` is installed.');
+
+            return;
         }
 
+        Log::error('Unable to determine `screen` version. Make sure `screen` is installed.');
     }
 
     protected function usesScreenDriver(): bool
