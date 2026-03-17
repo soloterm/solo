@@ -244,7 +244,6 @@ class ProcessTrackerTest extends Base
         $this->assertSame([200], $tracker::$killed);
         $this->assertTrue($tracker::$killedGracefully);
     }
-
 }
 
 class FakeProcessTracker extends ProcessTracker
