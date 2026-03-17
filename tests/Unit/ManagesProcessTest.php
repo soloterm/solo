@@ -178,6 +178,44 @@ class ManagesProcessTest extends Base
     }
 
     #[Test]
+    public function native_driver_surfaces_command_not_found_errors(): void
+    {
+        $this->skipUnlessPtyIsSupported();
+
+        config()->set('solo.process_driver', 'native');
+
+        $missingCommand = 'solo_missing_command_' . bin2hex(random_bytes(4));
+
+        $command = Command::from($missingCommand);
+        $command->setDimensions(120, 40);
+        $command->start();
+
+        try {
+            $deadline = microtime(true) + 2.0;
+
+            do {
+                $command->onTick();
+                $output = implode("\n", $command->wrappedLines()->all());
+
+                if ($command->processStopped() && str_contains($output, $missingCommand)) {
+                    break;
+                }
+
+                usleep(20_000);
+            } while (microtime(true) < $deadline);
+
+            $output = implode("\n", $command->wrappedLines()->all());
+
+            $this->assertStringContainsString($missingCommand, $output);
+            $this->assertMatchesRegularExpression('/(?:not found|No such file|could not be found)/i', $output);
+        } finally {
+            if ($command->processRunning()) {
+                $command->process?->signal(SIGKILL);
+            }
+        }
+    }
+
+    #[Test]
     public function process_tracking_state_can_be_reset_without_running_a_process(): void
     {
         $command = new class(name: 'Demo', command: 'echo ok') extends Command
