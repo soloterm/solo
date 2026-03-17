@@ -47,6 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           composer self-update ${{ matrix.composer-version }}
+          composer remove larastan/larastan phpstan/phpstan --dev --no-update --no-interaction
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
           composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
 

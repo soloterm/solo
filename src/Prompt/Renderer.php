@@ -26,7 +26,10 @@ use SoloTerm\Solo\Support\AnsiAware;
 
 class Renderer extends PromptsRenderer
 {
-    use Aligns, DrawsHotkeys, DrawsScrollbars, InteractsWithStrings;
+    use Aligns, DrawsHotkeys, InteractsWithStrings;
+    use DrawsScrollbars {
+        scrollbar as protected drawScrollbar;
+    }
 
     public Theme $theme;
 
@@ -305,10 +308,10 @@ class Renderer extends PromptsRenderer
 
         // Replace all content with spaces. We add the content
         // into the pane separately in the __invoke method.
-        $visible = collect($visibleContent)
-            ->map(fn(string $line) => str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8')))
-            ->values()
-            ->all();
+        $visible = array_map(
+            fn(string $line): string => str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8')),
+            $visibleContent
+        );
 
         $totalLines = $wrappedLines->count();
 
@@ -325,8 +328,8 @@ class Renderer extends PromptsRenderer
 
         // If this conditional is true then it means that there wasn't
         // enough content to scroll, so we have to pretend by padding.
-        if ($scrolled === $visible) {
-            $scrolled = $this->padScrolledContent($scrolled, $allowedLines);
+        if ($allowedLines >= $totalLines) {
+            $scrolled = new Collection($this->padScrolledContent($visible, $allowedLines));
         }
 
         foreach ($scrolled as $line) {
@@ -430,6 +433,25 @@ class Renderer extends PromptsRenderer
         return $this->currentCommand->isInteractive()
             ? $this->theme->boxBorderInteractive($text)
             : $this->theme->boxBorder($text);
+    }
+
+    /**
+     * Normalize Laravel Prompts' scrollbar output to a collection across supported versions.
+     *
+     * @param  array<int, string>|Collection<int, string>  $visible
+     * @return Collection<int, string>
+     */
+    protected function scrollbar(
+        array|Collection $visible,
+        int $firstVisible,
+        int $height,
+        int $total,
+        int $width,
+        string $color = 'cyan'
+    ): Collection {
+        $lines = $visible instanceof Collection ? $visible : new Collection($visible);
+
+        return $this->drawScrollbar($lines, $firstVisible, $height, $total, $width, $color);
     }
 
     /**
