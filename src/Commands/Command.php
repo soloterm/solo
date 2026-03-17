@@ -21,6 +21,7 @@ use SoloTerm\Solo\Support\AnsiAware;
 use SoloTerm\Solo\Support\KeyPressListener;
 use SplQueue;
 
+/** @phpstan-consistent-constructor */
 class Command implements Loopable
 {
     use ManagesProcess, Ticks;
@@ -43,6 +44,7 @@ class Command implements Loopable
 
     public int $scrollIndex = 0;
 
+    /** @var SplQueue<string> */
     public SplQueue $lines;
 
     public int $height = 0;
@@ -108,6 +110,9 @@ class Command implements Loopable
         //
     }
 
+    /**
+     * @return array<int|string, Hotkey>
+     */
     public function allHotkeys(): array
     {
         // In interactive mode, the only hotkey that works is
@@ -125,7 +130,7 @@ class Command implements Loopable
             $hotkeys['interactive'] = Hotkey::make('i', KeyHandler::Interactive)->label('Enter interactive mode');
         }
 
-        return array_filter($hotkeys);
+        return $hotkeys;
     }
 
     /**
@@ -138,7 +143,7 @@ class Command implements Loopable
         ];
     }
 
-    public function setDimensions($width, $height): static
+    public function setDimensions(int $width, int $height): static
     {
         $existingOutput = isset($this->screen) ? $this->renderScreenBuffer() : null;
 
@@ -228,12 +233,12 @@ class Command implements Loopable
     | Actions
     |--------------------------------------------------------------------------
     */
-    public function dd()
+    public function dd(): never
     {
         dd($this->screen->printable->buffer);
     }
 
-    public function addOutput($text)
+    public function addOutput(string $text): void
     {
         if ($this->expectsOutputMarkers) {
             $text = Str::before($text, $this->outputEndMarker);
@@ -243,7 +248,7 @@ class Command implements Loopable
         $this->screen->write($text);
     }
 
-    public function addLine($line)
+    public function addLine(string $line): void
     {
         $this->screen->writeln($line);
     }
@@ -301,7 +306,7 @@ class Command implements Loopable
         }
     }
 
-    public function scrollTo($index): void
+    public function scrollTo(int|float $index): void
     {
         $this->scrollIndex = max(0, min(
             $index,
@@ -309,7 +314,7 @@ class Command implements Loopable
         ));
     }
 
-    public function scrollDown($amount = 1): void
+    public function scrollDown(int|float $amount = 1): void
     {
         $this->paused = true;
         $this->scrollTo($this->scrollIndex + $amount);
@@ -320,18 +325,18 @@ class Command implements Loopable
         $this->scrollDown(INF);
     }
 
-    public function pageDown()
+    public function pageDown(): void
     {
         $this->scrollDown($this->scrollPaneHeight() - 1);
     }
 
-    public function scrollUp($amount = 1): void
+    public function scrollUp(int|float $amount = 1): void
     {
         $this->paused = true;
         $this->scrollTo($this->scrollIndex - $amount);
     }
 
-    public function pageUp()
+    public function pageUp(): void
     {
         $this->scrollUp($this->scrollPaneHeight() - 1);
     }
@@ -361,6 +366,9 @@ class Command implements Loopable
         return max(1, $this->width - 4);
     }
 
+    /**
+     * @return Collection<int, string>
+     */
     public function wrappedLines(): Collection
     {
         // Check if the screen has changed since last render
@@ -409,7 +417,7 @@ class Command implements Loopable
         return implode(PHP_EOL, $lines);
     }
 
-    protected function makeNewScreen()
+    protected function makeNewScreen(): Screen
     {
         $screen = new Screen(
             width: $this->scrollPaneWidth(),
@@ -421,7 +429,10 @@ class Command implements Loopable
         });
     }
 
-    public function wrapLine($line, $width = null, $continuationIndent = 0, $recursive = false): array
+    /**
+     * @return array<int, string>
+     */
+    public function wrapLine(string $line, ?int $width = null, int $continuationIndent = 0, bool $recursive = false): array
     {
         $defaultWidth = $this->scrollPaneWidth();
 
@@ -446,15 +457,13 @@ class Command implements Loopable
         $first = array_shift($exploded);
         $indent = str_repeat(' ', $continuationIndent);
 
-        if ($continuationIndent) {
-            $allIndented = true;
-            foreach ($exploded as $continuationLine) {
-                $allIndented = $allIndented && str_starts_with($continuationLine, $indent);
-            }
+        $allIndented = true;
+        foreach ($exploded as $continuationLine) {
+            $allIndented = $allIndented && str_starts_with($continuationLine, $indent);
+        }
 
-            if ($allIndented) {
-                return [$first, ...$exploded];
-            }
+        if ($allIndented) {
+            return [$first, ...$exploded];
         }
 
         $rest = $indent . ltrim(implode('', $exploded));
@@ -465,13 +474,20 @@ class Command implements Loopable
         ];
     }
 
+    /**
+     * @param  Collection<int, string>  $lines
+     * @return Collection<int, string>
+     */
     protected function modifyWrappedLines(Collection $lines): Collection
     {
         // Primarily here for any subclasses.
         return $lines;
     }
 
-    public static function __set_state(array $data)
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public static function __set_state(array $data): static
     {
         $instance = new static;
 

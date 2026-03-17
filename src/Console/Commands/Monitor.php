@@ -34,7 +34,7 @@ class Monitor extends Command
 
     protected $description = 'Watch for the stray processes and clean them up.';
 
-    public function handle()
+    public function handle(): int
     {
         $parent = (int) $this->argument('pid');
 

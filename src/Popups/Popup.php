@@ -28,12 +28,12 @@ abstract class Popup
         $this->bootTraits();
     }
 
-    public function boot()
+    public function boot(): void
     {
         //
     }
 
-    public function bootTraits()
+    public function bootTraits(): void
     {
         $class = static::class;
 
@@ -50,18 +50,18 @@ abstract class Popup
         }
     }
 
-    abstract public function renderSingleFrame();
+    abstract public function renderSingleFrame(): void;
 
-    abstract public function handleInput($key);
+    abstract public function handleInput(string $key): void;
 
     abstract public function shouldClose(): bool;
 
-    public function output()
+    public function output(): string
     {
         return $this->screen->output();
     }
 
-    public function render(int $offsetX = 0, int $offsetY = 0)
+    public function render(int $offsetX = 0, int $offsetY = 0): string
     {
         $offsetX = max(0, $offsetX);
         $offsetY = max(0, $offsetY);
@@ -84,7 +84,7 @@ abstract class Popup
         return $rendered;
     }
 
-    public function footer()
+    public function footer(): string
     {
         return 'Press ' . KeycodeMap::toDisplay("\x18") . ' to exit without saving.';
     }

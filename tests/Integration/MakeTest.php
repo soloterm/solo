@@ -16,7 +16,7 @@ use SoloTerm\Solo\Commands\MakeCommand;
 class MakeTest extends Base
 {
     #[Test]
-    public function basic_test()
+    public function basic_test(): void
     {
         $actions = [
 

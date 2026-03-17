@@ -18,17 +18,17 @@ class Help extends Popup
 
     public bool $exitRequested = false;
 
-    public function boot()
+    public function boot(): void
     {
         $this->screen->writeln('This is where the help text would go.');
     }
 
-    public function renderSingleFrame()
+    public function renderSingleFrame(): void
     {
         //
     }
 
-    public function handleInput($key)
+    public function handleInput(string $key): void
     {
         if ($key === Key::ESCAPE) {
             $this->exitRequested = true;
@@ -37,7 +37,7 @@ class Help extends Popup
         }
     }
 
-    public function footer()
+    public function footer(): string
     {
         return 'Press ESC to close.';
     }

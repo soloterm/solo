@@ -10,6 +10,7 @@
 namespace SoloTerm\Solo\Popups;
 
 use Generator;
+use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Support\CapturedMultiSelectPrompt;
 use SoloTerm\Solo\Support\CapturedTextPrompt;
@@ -20,20 +21,15 @@ class CommandPalette extends Popup
 
     public bool $exitRequested = false;
 
-    public function boot()
+    public function boot(): void
     {
         $this->screen->writeln('Pick all the commands you want to have in your dashboard.');
     }
 
     public function form(): Generator
     {
-        $commands = collect(Solo::commands())->map(function ($command, $name) {
-            if (is_string($command)) {
-                return $name;
-            }
-
-            return $command->name ?? $name;
-        });
+        $commands = collect(Solo::commands())
+            ->map(fn(Command $command) => $command->name ?? $command->command ?? '');
 
         yield $select = new CapturedMultiSelectPrompt(
             label: 'Pick a command',
@@ -49,7 +45,7 @@ class CommandPalette extends Popup
         );
     }
 
-    public function handleInput($key)
+    public function handleInput(string $key): void
     {
         if ($key === "\x18") {
             $this->exitRequested = true;

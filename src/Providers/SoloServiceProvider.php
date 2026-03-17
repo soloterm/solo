@@ -19,14 +19,14 @@ use SoloTerm\Solo\Manager;
 
 class SoloServiceProvider extends ServiceProvider
 {
-    public function register()
+    public function register(): void
     {
         $this->app->singleton(Manager::class);
 
         $this->mergeConfigFrom(__DIR__ . '/../../config/solo.php', 'solo');
     }
 
-    public function boot()
+    public function boot(): void
     {
         if (!$this->app->runningInConsole()) {
             return;
@@ -36,7 +36,7 @@ class SoloServiceProvider extends ServiceProvider
         $this->publishFiles();
     }
 
-    protected function registerCommands()
+    protected function registerCommands(): void
     {
         $this->commands([
             Monitor::class,
@@ -57,7 +57,7 @@ class SoloServiceProvider extends ServiceProvider
         }
     }
 
-    protected function publishFiles()
+    protected function publishFiles(): void
     {
         $this->publishes([
             __DIR__ . '/../../config/solo.php' => config_path('solo.php'),

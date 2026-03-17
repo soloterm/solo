@@ -57,7 +57,7 @@ class ErrorBoxTest extends TestCase
     }
 
     #[Test]
-    public function it_applies_a_custom_color()
+    public function it_applies_a_custom_color(): void
     {
         $message = 'Color test';
         $errorBox = new ErrorBox($message, 'Custom Error', 'green');

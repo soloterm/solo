@@ -21,7 +21,7 @@ class MakeCommand extends Command
         $this->autostart = true;
     }
 
-    public function whenStopping()
+    public function whenStopping(): void
     {
         // Send multiple Ctrl+C signals to exit potentially nested prompts.
         // Each prompt may need its own signal to close properly.

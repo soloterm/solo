@@ -24,8 +24,11 @@ class VimHotkeys extends DefaultHotkeys
     /**
      * In case you want VimKeys in addition to something else, you
      * can just use this function from your HotkeyProvider.
+     *
+     * @param  array<string, Hotkey>  $map
+     * @return array<string, Hotkey>
      */
-    public static function remap($map): array
+    public static function remap(array $map): array
     {
         $map['prev_next']->keyDisplay('h/l');
         $map['scroll']->keyDisplay('j/k');

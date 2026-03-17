@@ -16,7 +16,7 @@ use Str;
 class BasicTest extends Base
 {
     #[Test]
-    public function basic_test_only()
+    public function basic_test_only(): void
     {
         $actions = [
             function (string $ansi, string $plain) {
@@ -40,7 +40,7 @@ class BasicTest extends Base
     }
 
     #[Test]
-    public function stop_command_test()
+    public function stop_command_test(): void
     {
         $logsCommand = $this->tailLogCommand();
 
@@ -70,7 +70,7 @@ class BasicTest extends Base
     }
 
     #[Test]
-    public function clear_output_test()
+    public function clear_output_test(): void
     {
         $rand = 'Testing ' . Str::random();
         Log::info($rand);
@@ -90,7 +90,7 @@ class BasicTest extends Base
     }
 
     #[Test]
-    public function tail_restarts_too_quickly()
+    public function tail_restarts_too_quickly(): void
     {
         $rand = 'Testing ' . Str::random();
         Log::info($rand);

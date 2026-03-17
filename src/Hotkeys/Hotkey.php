@@ -18,8 +18,12 @@ use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Prompt\Dashboard;
 use SoloTerm\Solo\Support\KeyPressListener;
 
+/** @phpstan-consistent-constructor */
 class Hotkey
 {
+    /** @var array<int, string>|string|null */
+    public array|string|null $keys = [];
+
     protected Dashboard $prompt;
 
     protected Command $command;
@@ -41,8 +45,13 @@ class Hotkey
         return new static(...$arguments);
     }
 
-    public function __construct(public array|string|null $keys = [], KeyHandler|Closure|null $handler = null)
+    /**
+     * @param  array<int, string>|string|null  $keys
+     */
+    public function __construct(array|string|null $keys = [], KeyHandler|Closure|null $handler = null)
     {
+        $this->keys = $keys;
+
         if ($handler instanceof KeyHandler) {
             $this->fromKeyHandler = $handler;
             $handler = $handler->handler();
@@ -75,6 +84,9 @@ class Hotkey
         }
     }
 
+    /**
+     * @param  array<int, string>|string  $keys
+     */
     public function remap(array|string $keys): static
     {
         $this->keys = $keys;
@@ -82,14 +94,14 @@ class Hotkey
         return $this;
     }
 
-    public function label(string|Closure $value)
+    public function label(string|Closure $value): static
     {
         $this->label = $value;
 
         return $this;
     }
 
-    public function makeLabel()
+    public function makeLabel(): ?string
     {
         return $this->callWithParams($this->label);
     }
@@ -124,7 +136,7 @@ class Hotkey
         return $this;
     }
 
-    public function invisible()
+    public function invisible(): static
     {
         return $this->visible(false);
     }
@@ -152,7 +164,6 @@ class Hotkey
 
         $reflected = new ReflectionFunction($value);
 
-        $reflected->getParameters();
         $arguments = collect($reflected->getParameters())
             ->map(function (ReflectionParameter $parameter) {
                 $type = $parameter->getType();

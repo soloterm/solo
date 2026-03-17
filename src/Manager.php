@@ -150,6 +150,9 @@ class Manager
         return $this;
     }
 
+    /**
+     * @param  array<int|string, string|Command>  $commands
+     */
     public function addCommands(array $commands): static
     {
         foreach ($commands as $name => $command) {
@@ -208,7 +211,10 @@ class Manager
         return $this->cachedTheme = new $theme;
     }
 
-    public function setRenderer($renderer)
+    /**
+     * @param  class-string<PromptsRenderer>  $renderer
+     */
+    public function setRenderer(string $renderer): void
     {
         if (!is_subclass_of($renderer, PromptsRenderer::class)) {
             throw new InvalidArgumentException(
@@ -224,6 +230,10 @@ class Manager
         return $this->renderer;
     }
 
+    /**
+     * @param  array<mixed>  $default
+     * @return array<mixed>
+     */
     private function getArrayConfigValue(string $key, array $default = []): array
     {
         $value = Config::get($key, $default);

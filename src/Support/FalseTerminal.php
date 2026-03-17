@@ -13,9 +13,9 @@ use Laravel\Prompts\Terminal;
 
 class FalseTerminal extends Terminal
 {
-    public $width = 80;
+    public int $width = 80;
 
-    public $height = 24;
+    public int $height = 24;
 
     public function __construct()
     {

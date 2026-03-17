@@ -16,6 +16,9 @@ class ManagesProcessTest extends Base
 
         $command = new class(name: 'Tests', command: 'APP_ENV=testing php artisan test --filter="User Test"') extends Command
         {
+            /**
+             * @return array<int, string>|string
+             */
             public function build(): array|string
             {
                 $this->setDimensions(100, 40);
@@ -37,6 +40,9 @@ class ManagesProcessTest extends Base
 
         $command = new class(name: 'Tests', command: 'APP_ENV=testing php artisan test --filter="User Test"') extends Command
         {
+            /**
+             * @return array{built: array<int, string>|string, width: int, height: int}
+             */
             public function buildWithDimensions(): array
             {
                 $this->setDimensions(100, 40);
@@ -191,6 +197,16 @@ class ManagesProcessTest extends Base
                 $this->resetProcessTrackingState();
             }
 
+            /**
+             * @return array{
+             *     children: array<int, string>,
+             *     childrenProcessPid: ?int,
+             *     cachedPtyDevice: ?string,
+             *     cachedPtyDevicePid: ?int,
+             *     partialBuffer: string,
+             *     hadOutputThisTick: bool
+             * }
+             */
             public function trackingState(): array
             {
                 return [
@@ -227,12 +243,18 @@ class ManagesProcessTest extends Base
                 return false;
             }
 
+            /**
+             * @param  array<int, string>  $children
+             */
             public function seedTrackedChildren(array $children, ?int $pid = null): void
             {
                 $this->children = $children;
                 $this->childrenProcessPid = $pid;
             }
 
+            /**
+             * @return array<int, string>
+             */
             public function trackedChildren(): array
             {
                 return $this->children;

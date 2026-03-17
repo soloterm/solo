@@ -42,6 +42,9 @@ class LightTheme implements Theme
         return $this->gray($text);
     }
 
+    /**
+     * @param  'running'|'paused'|'stopped'  $state
+     */
     public function tabIndicator(string $state): string
     {
         return match ($state) {
@@ -144,12 +147,12 @@ class LightTheme implements Theme
 EOT;
     }
 
-    public function boxBorder($text): string
+    public function boxBorder(string $text): string
     {
         return $this->gray($text);
     }
 
-    public function boxBorderInteractive($text): string
+    public function boxBorderInteractive(string $text): string
     {
         return $this->bold($this->cyan($text));
     }

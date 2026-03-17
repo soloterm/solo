@@ -17,12 +17,14 @@ class Install extends Command
 
     protected $description = 'Install the Solo service provider';
 
-    public function handle()
+    public function handle(): int
     {
         $this->comment('Publishing Solo configuration...');
         $this->callSilent('vendor:publish', ['--tag' => 'solo-config']);
 
         $this->info('Solo installed successfully.');
         $this->info('Run `php artisan solo` to start.');
+
+        return self::SUCCESS;
     }
 }

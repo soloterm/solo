@@ -13,9 +13,11 @@ use SoloTerm\Screen\Screen;
 
 interface CapturedPromptInterface
 {
-    public function setScreen(Screen $screen);
+    public function setScreen(Screen $screen): void;
 
-    public function renderSingleFrame();
+    public function isComplete(): bool;
 
-    public function handleInput($key);
+    public function renderSingleFrame(): void;
+
+    public function handleInput(string $key): void;
 }

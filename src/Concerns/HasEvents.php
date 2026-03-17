@@ -55,7 +55,7 @@ trait HasEvents
         }
     }
 
-    public function emit(Event|string $event, ...$data): void
+    public function emit(Event|string $event, mixed ...$data): void
     {
         $event = $event instanceof Event ? $event->value : $event;
 

@@ -17,16 +17,19 @@ class KeycodeMap
     /**
      * @var array<string,string>
      */
-    public static $custom = [
+    public static array $custom = [
         //
     ];
 
-    public static function toDisplay($code)
+    public static function toDisplay(string $code): string
     {
         return Arr::get([...static::map(), ...static::$custom], $code, $code);
     }
 
-    public static function map()
+    /**
+     * @return array<string, string>
+     */
+    public static function map(): array
     {
         // https://gist.github.com/GLMeece/6a2b71c57df228e5a4a35e4b92b0992f
         return [

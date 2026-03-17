@@ -14,4 +14,9 @@ use Laravel\Prompts\MultiSelectPrompt;
 class CapturedMultiSelectPrompt extends MultiSelectPrompt implements CapturedPromptInterface
 {
     use CapturedPrompt;
+
+    protected function rendererClass(): string
+    {
+        return \Laravel\Prompts\Themes\Default\MultiSelectPromptRenderer::class;
+    }
 }

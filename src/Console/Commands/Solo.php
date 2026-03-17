@@ -61,7 +61,7 @@ class Solo extends Command
         return (bool) Config::get('solo.use_screen', true);
     }
 
-    protected function monitor()
+    protected function monitor(): void
     {
         $process = new Process(['php', 'artisan', 'solo:monitor', getmypid()]);
 

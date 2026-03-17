@@ -31,6 +31,8 @@ class ProcessTracker
 
     /**
      * Cached process list.
+     *
+     * @var array<int, array{pid: int, ppid: int}>|null
      */
     protected static ?array $processListCache = null;
 
@@ -43,11 +45,11 @@ class ProcessTracker
      * Find all child processes of a given PID.
      *
      * @param  int|string  $pid  Parent process ID
-     * @param  array|null  $processes  Pre-fetched process list
+     * @param  array<int, array{pid: int, ppid: int}>|null  $processes  Pre-fetched process list
      * @param  int  $depth  Current traversal depth
-     * @return array List of child PIDs
+     * @return array<int, int> List of child PIDs
      */
-    public static function children($pid, $processes = null, int $depth = 0): array
+    public static function children(int|string $pid, ?array $processes = null, int $depth = 0): array
     {
         // Prevent runaway traversal on malformed process trees.
         if ($depth >= static::MAX_RECURSION_DEPTH) {
@@ -67,8 +69,8 @@ class ProcessTracker
         $childrenByParent = [];
 
         foreach ($processes as $process) {
-            $childPid = (int) ($process['pid'] ?? 0);
-            $parentPid = (int) ($process['ppid'] ?? 0);
+            $childPid = $process['pid'];
+            $parentPid = $process['ppid'];
 
             if ($childPid <= 0) {
                 continue;
@@ -110,7 +112,7 @@ class ProcessTracker
     /**
      * Kill processes by PID.
      *
-     * @param  array  $pids  PIDs to kill
+     * @param  array<int|string>  $pids  PIDs to kill
      * @param  bool  $graceful  If true, try SIGTERM first before SIGKILL
      */
     public static function kill(array $pids, bool $graceful = false): void
@@ -167,6 +169,9 @@ class ProcessTracker
     /**
      * Send a signal to a list of PIDs.
      */
+    /**
+     * @param  array<int|string>  $pids
+     */
     public static function signal(array $pids, int $signal): void
     {
         $pids = static::sanitizePids($pids);
@@ -196,12 +201,12 @@ class ProcessTracker
      * Check if a single process is running.
      *
      * @param  int|string  $pid  Process ID to check
-     * @param  array|null  $processes  Optional process snapshot for lookup
+     * @param  array<int, array{pid: int, ppid: int}>|null  $processes  Optional process snapshot for lookup
      * @return bool True if process is running
      *
      * @throws RuntimeException If PID is invalid
      */
-    public static function isRunning($pid, ?array $processes = null): bool
+    public static function isRunning(int|string $pid, ?array $processes = null): bool
     {
         if (!is_numeric($pid)) {
             throw new RuntimeException("Invalid PID: {$pid}");
@@ -229,6 +234,7 @@ class ProcessTracker
     /**
      * Resolve process command lines by PID.
      *
+     * @param  array<int|string>  $pids
      * @return array<int, string>
      */
     public static function commandsByPid(array $pids): array
@@ -266,8 +272,8 @@ class ProcessTracker
     /**
      * Return all the PIDs that are running from a given list.
      *
-     * @param  array  $pids  Array of PIDs to check
-     * @return array Array of PIDs that are still running
+     * @param  array<int|string>  $pids  Array of PIDs to check
+     * @return array<int, int> Array of PIDs that are still running
      */
     public static function running(array $pids): array
     {
@@ -312,7 +318,7 @@ class ProcessTracker
     /**
      * Get the system process list with caching.
      *
-     * @return array Array of ['pid' => int, 'ppid' => int] entries
+     * @return array<int, array{pid: int, ppid: int}> Array of ['pid' => int, 'ppid' => int] entries
      *
      * @throws RuntimeException On unsupported OS
      */
@@ -367,7 +373,8 @@ class ProcessTracker
     }
 
     /**
-     * @return array<int>
+     * @param  array<int|string>  $pids
+     * @return array<int, int>
      */
     protected static function sanitizePids(array $pids): array
     {
@@ -386,7 +393,7 @@ class ProcessTracker
         $sanitized = [];
 
         foreach ($pidCommandMap as $pid => $command) {
-            if (!is_numeric($pid) || (int) $pid <= 0 || !is_string($command) || trim($command) === '') {
+            if (!is_numeric($pid) || (int) $pid <= 0 || trim($command) === '') {
                 continue;
             }
 
@@ -426,10 +433,13 @@ class ProcessTracker
         return false;
     }
 
+    /**
+     * @param  array<int, array{pid: int, ppid: int}>  $processes
+     */
     protected static function processListContainsPid(int $pid, array $processes): bool
     {
         foreach ($processes as $process) {
-            if ((int) ($process['pid'] ?? 0) === $pid) {
+            if ($process['pid'] === $pid) {
                 return true;
             }
         }

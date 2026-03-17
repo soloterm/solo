@@ -111,6 +111,9 @@ class TestCommandTest extends TestCase
         $this->assertSame($expected, TestCommand::looksLikeTestCommand($command));
     }
 
+    /**
+     * @return array<string, array{0: string, 1: bool}>
+     */
     public static function commandPatternProvider(): array
     {
         return [

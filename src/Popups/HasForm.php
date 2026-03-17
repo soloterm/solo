@@ -16,14 +16,14 @@ trait HasForm
 {
     protected Generator $form;
 
-    public function bootHasForm()
+    public function bootHasForm(): void
     {
         $this->form = $this->form();
     }
 
     abstract public function form(): Generator;
 
-    public function renderForm()
+    public function renderForm(): void
     {
         $step = $this->form->current();
 
@@ -43,12 +43,12 @@ trait HasForm
         }
     }
 
-    public function renderSingleFrame()
+    public function renderSingleFrame(): void
     {
         $this->renderForm();
     }
 
-    public function handleFormInput($key)
+    public function handleFormInput(string $key): void
     {
         if ($this->form->current() instanceof CapturedPromptInterface) {
             $this->form->current()->handleInput($key);

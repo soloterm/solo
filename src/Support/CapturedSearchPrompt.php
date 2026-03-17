@@ -14,4 +14,9 @@ use Laravel\Prompts\SearchPrompt;
 class CapturedSearchPrompt extends SearchPrompt implements CapturedPromptInterface
 {
     use CapturedPrompt;
+
+    protected function rendererClass(): string
+    {
+        return \Laravel\Prompts\Themes\Default\SearchPromptRenderer::class;
+    }
 }

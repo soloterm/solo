@@ -15,17 +15,20 @@ class Frames
 {
     protected int $current = 0;
 
-    public function next()
+    public function next(): void
     {
         $this->current++;
     }
 
-    public function current($buffer = 1)
+    public function current(int $buffer = 1): int
     {
-        return floor($this->current / $buffer);
+        return (int) floor($this->current / $buffer);
     }
 
-    public function frame(array $frames, $buffer = 1)
+    /**
+     * @param  array<int, string>  $frames
+     */
+    public function frame(array $frames, int $buffer = 1): string
     {
         return $frames[$this->current($buffer) % count($frames)];
     }

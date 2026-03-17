@@ -67,14 +67,14 @@ class DashboardRenderTest extends Base
     #[Test]
     public function dashboard_run_does_not_crash_in_non_interactive_mode_when_required_is_unset(): void
     {
+        $this->expectNotToPerformAssertions();
+
         Dashboard::setOutput(new BufferedConsoleOutput);
         Dashboard::interactive(false);
 
         try {
             $dashboard = new DashboardHarness;
             $dashboard->run();
-
-            $this->assertTrue(true);
         } finally {
             Dashboard::interactive(true);
         }

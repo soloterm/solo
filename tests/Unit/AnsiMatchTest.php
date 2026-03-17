@@ -26,7 +26,7 @@ class AnsiMatchTest extends Base
     //    }
 
     #[Test]
-    public function home_command_accepts_params()
+    public function home_command_accepts_params(): void
     {
         $sequence = '[5;10H';
         $result = AnsiMatcher::split("\e{$sequence}");

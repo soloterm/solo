@@ -12,6 +12,7 @@ namespace SoloTerm\Solo\Popups;
 use Cache;
 use Generator;
 use Laravel\Prompts\Key;
+use SoloTerm\Solo\Commands\Command;
 use SoloTerm\Solo\Events\Event;
 use SoloTerm\Solo\Facades\Solo;
 use SoloTerm\Solo\Support\CapturedQuickPickPrompt;
@@ -23,9 +24,10 @@ class TabPicker extends Popup
 
     public bool $exitRequested = false;
 
-    public static $recent = [];
+    /** @var array<int, string> */
+    public static array $recent = [];
 
-    public function boot()
+    public function boot(): void
     {
         Solo::on(
             event: Event::ActivateTab,
@@ -40,13 +42,7 @@ class TabPicker extends Popup
     public function form(): Generator
     {
         $names = collect(Solo::commands())
-            ->map(function ($command, $name) {
-                if (is_string($command)) {
-                    return $name;
-                }
-
-                return $command->name ?? $name;
-            });
+            ->map(fn(Command $command) => $command->name ?? $command->command ?? '');
 
         $names = $names->sort(
             $this->getSortByRecencyComparator($names->all())
@@ -69,7 +65,7 @@ class TabPicker extends Popup
         $this->exitRequested = true;
     }
 
-    public function handleInput($key)
+    public function handleInput(string $key): void
     {
         if ($key === Key::ESCAPE) {
             $this->exitRequested = true;
@@ -102,6 +98,10 @@ class TabPicker extends Popup
         return $rendered;
     }
 
+    /**
+     * @param  array<int, string>  $commands
+     * @return callable(string, string): int
+     */
     protected function getSortByRecencyComparator(array $commands): callable
     {
         // Step 1: Retrieve the sort order from cache

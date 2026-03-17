@@ -11,7 +11,7 @@ namespace SoloTerm\Solo\Commands;
 
 class UnsafeCommand extends Command
 {
-    public function logCaller($caller)
+    public function logCaller(string $caller): static
     {
         $message = <<<EOT
 Cannot start potentially unsafe process added from [$caller]. 

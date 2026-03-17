@@ -42,10 +42,11 @@ trait ManagesProcess
 
     public ?InvokedProcess $process = null;
 
-    public $outputStartMarker = '[[==SOLO_START==]]';
+    public string $outputStartMarker = '[[==SOLO_START==]]';
 
-    public $outputEndMarker = '[[==SOLO_END==]]';
+    public string $outputEndMarker = '[[==SOLO_END==]]';
 
+    /** @var array<int, Closure> */
     protected array $afterTerminateCallbacks = [];
 
     protected bool $stopping = false;
@@ -70,7 +71,8 @@ trait ManagesProcess
      */
     protected ?int $childrenProcessPid = null;
 
-    protected $environment = [];
+    /** @var array<string, int|string> */
+    protected array $environment = [];
 
     /**
      * Cached PTY device path for resize operations.
@@ -152,6 +154,9 @@ trait ManagesProcess
         ]);
     }
 
+    /**
+     * @return array<int, string>|string
+     */
     protected function buildCommandArray(Screen $screen): array|string
     {
         return match ($this->processDriver()) {
@@ -169,6 +174,9 @@ trait ManagesProcess
         return $this->command;
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function buildNativeCommandArray(Screen $screen): array
     {
         $this->expectsOutputMarkers = false;
@@ -185,6 +193,9 @@ trait ManagesProcess
         return ['bash', '-lc', $built];
     }
 
+    /**
+     * @return array<int, string>
+     */
     protected function buildScreenCommandArray(Screen $screen): array
     {
         $this->expectsOutputMarkers = true;
@@ -247,14 +258,14 @@ trait ManagesProcess
             : static::PROCESS_DRIVER_LEGACY;
     }
 
-    protected function localeEnvironmentVariables()
+    protected function localeEnvironmentVariables(): string
     {
         $locale = escapeshellarg($this->utf8Locale());
 
         return "export LC_ALL={$locale}; export LANG={$locale}";
     }
 
-    protected function utf8Locale()
+    protected function utf8Locale(): string
     {
         $locale = getenv('LC_ALL')
             ?: (getenv('LC_CTYPE') ?: getenv('LANG'));
@@ -306,7 +317,7 @@ trait ManagesProcess
         });
     }
 
-    public function sendInput(mixed $input)
+    public function sendInput(mixed $input): void
     {
         if (!$this->input->isClosed()) {
             $this->input->write($input);
@@ -320,6 +331,9 @@ trait ManagesProcess
         return $this;
     }
 
+    /**
+     * @param  array<string, int|string>  $env
+     */
     public function withEnv(array $env): static
     {
         $this->environment = [
@@ -330,6 +344,9 @@ trait ManagesProcess
         return $this;
     }
 
+    /**
+     * @return array<string, int|string>
+     */
     public function getEnvironment(): array
     {
         return $this->environment;
@@ -344,7 +361,7 @@ trait ManagesProcess
         return $this;
     }
 
-    public function beforeStart()
+    public function beforeStart(): void
     {
         //
     }
@@ -378,7 +395,7 @@ trait ManagesProcess
         $this->addOutput($errorBox->render());
     }
 
-    public function whenStopping()
+    public function whenStopping(): void
     {
         //
     }
@@ -494,7 +511,7 @@ trait ManagesProcess
         $this->processRunning() ? $this->stop() : $this->start();
     }
 
-    public function afterTerminate($cb): static
+    public function afterTerminate(Closure $cb): static
     {
         $this->afterTerminateCallbacks[] = $cb;
 
@@ -590,14 +607,14 @@ trait ManagesProcess
         return null;
     }
 
-    protected function clearStdOut()
+    protected function clearStdOut(): void
     {
         $this->withSymfonyProcess(function (SymfonyProcess $process) {
             $process->clearOutput();
         });
     }
 
-    protected function clearStdErr()
+    protected function clearStdErr(): void
     {
         $this->withSymfonyProcess(function (SymfonyProcess $process) {
             $process->clearErrorOutput();
@@ -608,7 +625,7 @@ trait ManagesProcess
      * Access the underlying Symfony Process via reflection.
      * Includes safety checks for framework compatibility.
      */
-    protected function withSymfonyProcess(Closure $callback)
+    protected function withSymfonyProcess(Closure $callback): mixed
     {
         if (!$this->process) {
             return null;
@@ -719,14 +736,10 @@ trait ManagesProcess
         $this->childrenProcessPid = null;
     }
 
-    protected function callAfterTerminateCallbacks()
+    protected function callAfterTerminateCallbacks(): void
     {
         foreach ($this->afterTerminateCallbacks as $cb) {
-            if ($cb instanceof Closure) {
-                $cb = $cb->bindTo($this, static::class);
-            }
-
-            $cb();
+            $cb->bindTo($this, static::class)?->__invoke();
         }
 
         $this->afterTerminateCallbacks = [];

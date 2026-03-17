@@ -50,6 +50,7 @@ abstract class Base extends TestCase
      */
     protected int $maxLoopMilliseconds = 30_000;
 
+    /** @var array<int, callable> */
     protected array $newFrameCallbacks = [];
 
     protected string $tailLogPath;
@@ -88,7 +89,11 @@ abstract class Base extends TestCase
         parent::setUp();
     }
 
-    protected function runSolo(array $actions, ?Closure $provider = null)
+    /**
+     * @param  array<int, callable|string|int>  $actions
+     * @param  ?Closure(): void  $provider
+     */
+    protected function runSolo(array $actions, ?Closure $provider = null): void
     {
         // PHPUnit captures output, so we need to put an
         // end to that so we can see Solo on screen.
@@ -117,7 +122,11 @@ abstract class Base extends TestCase
         }
     }
 
-    protected function execute($actions, $closure)
+    /**
+     * @param  array<int, callable|string|int>  $actions
+     * @param  ?Closure(): void  $closure
+     */
+    protected function execute(array $actions, ?Closure $closure): void
     {
         $provider = $closure ?? function () {
             //
@@ -183,6 +192,9 @@ abstract class Base extends TestCase
             });
     }
 
+    /**
+     * @param  array<int, callable|string|int>  $actions
+     */
     protected function loop(array $actions): ProcessResult
     {
         $millisecondsSinceLastAction = 0;
@@ -271,7 +283,7 @@ abstract class Base extends TestCase
         return $this->process->wait();
     }
 
-    protected function write(string $string)
+    protected function write(string $string): void
     {
         echo $string;
     }
@@ -281,7 +293,7 @@ abstract class Base extends TestCase
         return 'tail -f -n 100 ' . $this->tailLogPath;
     }
 
-    protected function callNewFrameCallbacks($frame)
+    protected function callNewFrameCallbacks(string $frame): callable|string|int|null
     {
         $additionalAction = null;
         $callbacks = [];

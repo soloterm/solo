@@ -115,6 +115,9 @@ class Make extends Command
         Prompt::terminal()->restoreTty();
     }
 
+    /**
+     * @return Collection<string, string>
+     */
     protected function getAvailableTypes(): Collection
     {
         $output = Process::command('php artisan')->run()->output();

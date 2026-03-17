@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 class HotkeyTest extends Base
 {
     #[Test]
-    public function vim_hotkeys()
+    public function vim_hotkeys(): void
     {
         $this->height = 20;
         $logsCommand = $this->tailLogCommand();
@@ -41,7 +41,7 @@ class HotkeyTest extends Base
     }
 
     #[Test]
-    public function tab_navigation_with_arrow_keys()
+    public function tab_navigation_with_arrow_keys(): void
     {
         $logsCommand = $this->tailLogCommand();
 

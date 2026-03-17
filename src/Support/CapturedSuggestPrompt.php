@@ -14,4 +14,9 @@ use Laravel\Prompts\SuggestPrompt;
 class CapturedSuggestPrompt extends SuggestPrompt implements CapturedPromptInterface
 {
     use CapturedPrompt;
+
+    protected function rendererClass(): string
+    {
+        return \Laravel\Prompts\Themes\Default\SuggestPromptRenderer::class;
+    }
 }

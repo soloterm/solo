@@ -203,17 +203,26 @@ class ProcessTrackerTest extends Base
     {
         $tracker = new class extends ProcessTracker
         {
+            /** @var array<int, string> */
             public static array $commands = [];
 
+            /** @var array<int, int> */
             public static array $killed = [];
 
             public static bool $killedGracefully = false;
 
+            /**
+             * @param  array<int|string>  $pids
+             * @return array<int, string>
+             */
             public static function commandsByPid(array $pids): array
             {
                 return array_intersect_key(self::$commands, array_flip(array_map('intval', $pids)));
             }
 
+            /**
+             * @param  array<int|string>  $pids
+             */
             public static function kill(array $pids, bool $graceful = false): void
             {
                 self::$killed = array_values(array_map('intval', $pids));

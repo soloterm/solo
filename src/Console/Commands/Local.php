@@ -19,7 +19,7 @@ class Local extends Command
 
     protected $description = 'Link to a local copy of the Screen package for development.';
 
-    public function handle()
+    public function handle(): int
     {
         $composerPath = $this->getComposerPath();
 
@@ -44,6 +44,9 @@ class Local extends Command
         return $this->link($composer, $composerPath);
     }
 
+    /**
+     * @param  array<string, mixed>  $composer
+     */
     protected function link(array $composer, string $composerPath): int
     {
         $path = $this->option('path');
@@ -103,6 +106,9 @@ class Local extends Command
         return 0;
     }
 
+    /**
+     * @param  array<string, mixed>  $composer
+     */
     protected function revert(array $composer, string $composerPath): int
     {
         // Remove path repositories for screen
@@ -145,6 +151,9 @@ class Local extends Command
         return 0;
     }
 
+    /**
+     * @param  array<string, mixed>  $composer
+     */
     protected function writeComposer(array $composer, string $composerPath): bool
     {
         // Reorder keys to maintain standard composer.json order
@@ -170,6 +179,10 @@ class Local extends Command
         return true;
     }
 
+    /**
+     * @param  array<string, mixed>  $composer
+     * @return array<string, mixed>
+     */
     protected function reorderComposerKeys(array $composer): array
     {
         $order = [

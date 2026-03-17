@@ -19,16 +19,20 @@ class Quitting extends Popup
 
     public Screen $screen;
 
-    public array $commands;
+    /** @var array<int, Command> */
+    public array $commands = [];
 
-    public function setCommands(array $commands)
+    /**
+     * @param  array<int, Command>  $commands
+     */
+    public function setCommands(array $commands): static
     {
         $this->commands = $commands;
 
         return $this;
     }
 
-    public function renderSingleFrame()
+    public function renderSingleFrame(): void
     {
         $this->screen->write("\e[H\e[0J");
 
@@ -48,12 +52,12 @@ class Quitting extends Popup
         }
     }
 
-    public function handleInput($key)
+    public function handleInput(string $key): void
     {
         //
     }
 
-    public function footer()
+    public function footer(): string
     {
         return '';
     }

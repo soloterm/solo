@@ -11,7 +11,6 @@ namespace SoloTerm\Solo\Support;
 
 use Exception;
 use Laravel\Prompts\Key;
-use Laravel\Prompts\Themes\Default as Themes;
 use ReflectionClass;
 use SoloTerm\Screen\Screen;
 
@@ -21,12 +20,12 @@ trait CapturedPrompt
 
     protected bool $complete = false;
 
-    public function setScreen(Screen $screen)
+    public function setScreen(Screen $screen): void
     {
         $this->screen = $screen;
     }
 
-    public function isComplete()
+    public function isComplete(): bool
     {
         return $this->complete;
     }
@@ -36,7 +35,7 @@ trait CapturedPrompt
         throw new Exception('Do not call `prompt` directly on a CapturedPrompt.');
     }
 
-    public function callNativeKeyPressHandler($key)
+    public function callNativeKeyPressHandler(string $key): mixed
     {
         // Key presses often cause re-renders, so we have to capture that.
         return $this->withOutputCaptured(function () use ($key) {
@@ -44,12 +43,12 @@ trait CapturedPrompt
         });
     }
 
-    public function renderSingleFrame()
+    public function renderSingleFrame(): void
     {
         $this->withOutputCaptured($this->render(...));
     }
 
-    protected function withOutputCaptured($cb)
+    protected function withOutputCaptured(callable $cb): mixed
     {
         $terminal = new FalseTerminal;
         $terminal->width = $this->screen->width;
@@ -71,17 +70,14 @@ trait CapturedPrompt
         return $output;
     }
 
+    /**
+     * @return class-string
+     */
+    abstract protected function rendererClass(): string;
+
     protected function getRenderer(): callable
     {
-        $renderer = match (static::class) {
-            CapturedMultiSelectPrompt::class => Themes\MultiSelectPromptRenderer::class,
-            CapturedTextPrompt::class => Themes\TextPromptRenderer::class,
-            CapturedSearchPrompt::class => Themes\SearchPromptRenderer::class,
-            CapturedSuggestPrompt::class => Themes\SuggestPromptRenderer::class,
-            CapturedQuickPickPrompt::class => Themes\SearchPromptRenderer::class,
-
-            default => throw new Exception('Unknown prompt type.'),
-        };
+        $renderer = $this->rendererClass();
 
         return new $renderer($this);
     }
@@ -91,7 +87,7 @@ trait CapturedPrompt
         // Not needed as we're not using the real terminal.
     }
 
-    public function handleInput($key)
+    public function handleInput(string $key): void
     {
         $continue = $this->callNativeKeyPressHandler($key);
 

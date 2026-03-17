@@ -11,22 +11,22 @@ namespace SoloTerm\Solo\Support;
 
 class AnsiAware
 {
-    public static function mb_strlen($string): int
+    public static function mb_strlen(string $string): int
     {
         // Return length of the plain string
         return mb_strlen(static::plain($string));
     }
 
-    public static function plain($string): string
+    public static function plain(string $string): string
     {
         // Regular expression to match ANSI escape sequences
         $ansiEscapeSequence = '/\x1b\[[0-9;]*[A-Za-z]/';
 
         // Remove ANSI escape sequences
-        return preg_replace($ansiEscapeSequence, '', $string);
+        return preg_replace($ansiEscapeSequence, '', $string) ?? '';
     }
 
-    public static function substr($string, $start, $length = null): string
+    public static function substr(string $string, int $start, ?int $length = null): string
     {
         $ansiEscapeSequence = '/(\x1b\[[0-9;]*[mGK])/';
         $parts = preg_split($ansiEscapeSequence, $string, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
@@ -138,7 +138,7 @@ class AnsiAware
         return implode('', $substringParts);
     }
 
-    public static function wordwrap($string, $width = 75, $break = PHP_EOL, $cut = false): string
+    public static function wordwrap(string $string, int $width = 75, string $break = PHP_EOL, bool $cut = false): string
     {
         $ansiEscapeSequence = '/(\x1b\[[0-9;]*[mGK])/';
         $wordsPattern = '/(\S+\s+)/';

@@ -11,6 +11,9 @@ class ErrorBox
 {
     use Colors;
 
+    /**
+     * @param  string|array<int, string>  $message
+     */
     public function __construct(
         public string|array $message,
         public ?string $title = null,
@@ -66,7 +69,10 @@ class ErrorBox
         return implode($newLine, [$topBorder, ...$messageLines, $bottomBorder]) . $newLine;
     }
 
-    protected function boxPiece(string $position)
+    /**
+     * @param  'topLeft'|'topRight'|'vertical'|'horizontal'|'bottomLeft'|'bottomRight'  $position
+     */
+    protected function boxPiece(string $position): string
     {
         return match ($position) {
             'topLeft' => '╔',

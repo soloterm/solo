@@ -14,6 +14,8 @@ class TestCommand extends Command
     /**
      * Patterns that identify test commands which should use TestCommand
      * to ensure APP_ENV=testing is set properly.
+     *
+     * @var array<int, string>
      */
     protected static array $testCommandPatterns = [
         '/\bartisan\s+test\b/',

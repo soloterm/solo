@@ -27,6 +27,7 @@ use SoloTerm\Solo\Support\DiffRenderer;
 use SoloTerm\Solo\Support\Frames;
 use SoloTerm\Solo\Support\KeyPressListener;
 
+/** @phpstan-consistent-constructor */
 class Dashboard extends Prompt
 {
     use CreatesAnAltScreen, Loops, SetsUpAndResets;
@@ -140,7 +141,7 @@ class Dashboard extends Prompt
         $this->registerLoopables(...$this->commands);
     }
 
-    public function listenForEvents()
+    public function listenForEvents(): void
     {
         Solo::on(Event::ActivateTab, function (string $name) {
             foreach ($this->commands as $i => $command) {
@@ -152,7 +153,7 @@ class Dashboard extends Prompt
         });
     }
 
-    public function listenForSignals()
+    public function listenForSignals(): void
     {
         if (function_exists('pcntl_async_signals')) {
             pcntl_async_signals(true);
@@ -166,12 +167,12 @@ class Dashboard extends Prompt
         pcntl_signal(SIGQUIT, [$this, 'quit']);
     }
 
-    public function showPopup(Popup $popup)
+    public function showPopup(Popup $popup): void
     {
         $this->popup = $popup;
     }
 
-    public function exitPopup()
+    public function exitPopup(): void
     {
         $this->popup = null;
     }
@@ -202,6 +203,9 @@ class Dashboard extends Prompt
         return $this->commands[$this->selectedCommand];
     }
 
+    /**
+     * @return array{0: int, 1: int}
+     */
     public function getDimensions(): array
     {
         return [
@@ -246,7 +250,7 @@ class Dashboard extends Prompt
         return false;
     }
 
-    public function rebindHotkeys()
+    public function rebindHotkeys(): void
     {
         $this->listener->clear();
 
@@ -258,7 +262,7 @@ class Dashboard extends Prompt
             });
     }
 
-    public function enterInteractiveMode()
+    public function enterInteractiveMode(): void
     {
         if ($this->currentCommand()->processStopped()) {
             $this->currentCommand()->restart();
@@ -267,12 +271,12 @@ class Dashboard extends Prompt
         $this->currentCommand()->setMode(Command::MODE_INTERACTIVE);
     }
 
-    public function exitInteractiveMode()
+    public function exitInteractiveMode(): void
     {
         $this->currentCommand()->setMode(Command::MODE_PASSIVE);
     }
 
-    public function selectTab(int $index)
+    public function selectTab(int $index): void
     {
         $total = count($this->commands);
 
@@ -290,14 +294,14 @@ class Dashboard extends Prompt
         $this->commands[$this->selectedCommand]->focus();
     }
 
-    public function nextTab()
+    public function nextTab(): void
     {
         $this->selectTab(
             ($this->selectedCommand + 1) % count($this->commands)
         );
     }
 
-    public function previousTab()
+    public function previousTab(): void
     {
         $this->selectTab(
             ($this->selectedCommand - 1 + count($this->commands)) % count($this->commands)
@@ -306,7 +310,7 @@ class Dashboard extends Prompt
 
     protected function showDashboard(): void
     {
-        $this->currentCommand()->focus($this);
+        $this->currentCommand()->focus();
 
         $this->adaptiveLoop();
     }
@@ -317,7 +321,7 @@ class Dashboard extends Prompt
      */
     protected function adaptiveLoop(): void
     {
-        while (true) {
+        for (;;) {
             // Tick all commands to collect output (before rendering)
             foreach ($this->loopables as $component) {
                 $component->tick();
@@ -445,7 +449,7 @@ class Dashboard extends Prompt
         $this->currentCommand()->sendInput($key);
     }
 
-    protected function renderSingleFrame()
+    protected function renderSingleFrame(): void
     {
         if ($this->lastSelectedCommand !== $this->selectedCommand) {
             $this->lastSelectedCommand = $this->selectedCommand;

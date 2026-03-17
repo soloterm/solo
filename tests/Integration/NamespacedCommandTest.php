@@ -16,7 +16,7 @@ use SoloTerm\Solo\Commands\Command;
 class NamespacedCommandTest extends Base
 {
     #[Test]
-    public function run_solo_command_in_directory()
+    public function run_solo_command_in_directory(): void
     {
         $actions = [
             's',

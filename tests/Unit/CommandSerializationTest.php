@@ -60,9 +60,11 @@ class CommandSerializationTest extends TestCase
     /**
      * Assert that the config line contains command instances to be serialised
      */
-    protected function assertUnserializedConfig($config): void
+    /**
+     * @param  array<string, mixed>  $config
+     */
+    protected function assertUnserializedConfig(array $config): void
     {
-        $this->assertIsArray($config);
         $this->assertArrayHasKey('commands', $config);
         $this->assertNotEmpty($config['commands']);
 
@@ -74,7 +76,7 @@ class CommandSerializationTest extends TestCase
     /**
      * Recursively check that there is command instances
      */
-    private function assertUnserializedCommands($command): void
+    private function assertUnserializedCommands(mixed $command): void
     {
         if ($command instanceof Command) {
             $this->assertInstanceOf(Command::class, $command);

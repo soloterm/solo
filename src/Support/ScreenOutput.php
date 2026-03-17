@@ -16,6 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ScreenOutput implements OutputInterface
 {
+    /** @var OutputInterface::VERBOSITY_* */
     protected int $verbosity = OutputInterface::VERBOSITY_NORMAL;
 
     protected bool $decorated = true;
@@ -28,11 +29,14 @@ class ScreenOutput implements OutputInterface
         $this->formatter->setDecorated($this->decorated);
     }
 
-    public function output()
+    public function output(): string
     {
         return $this->screen->output();
     }
 
+    /**
+     * @param  iterable<int, string>|string  $messages
+     */
     public function write(iterable|string $messages, bool $newline = false, int $options = 0): void
     {
         $messages = $this->normalizeMessages($messages);
@@ -47,16 +51,25 @@ class ScreenOutput implements OutputInterface
         $this->screen->write($messages);
     }
 
+    /**
+     * @param  iterable<int, string>|string  $messages
+     */
     public function writeln(iterable|string $messages, int $options = 0): void
     {
         $this->write($messages, true, $options);
     }
 
+    /**
+     * @param OutputInterface::VERBOSITY_* $level
+     */
     public function setVerbosity(int $level): void
     {
         $this->verbosity = $level;
     }
 
+    /**
+     * @return OutputInterface::VERBOSITY_*
+     */
     public function getVerbosity(): int
     {
         return $this->verbosity;
@@ -109,6 +122,9 @@ class ScreenOutput implements OutputInterface
         return $this->formatter;
     }
 
+    /**
+     * @param  iterable<int, string>|string  $messages
+     */
     protected function normalizeMessages(iterable|string $messages): string
     {
         if (is_iterable($messages)) {

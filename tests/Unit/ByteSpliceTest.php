@@ -16,7 +16,7 @@ use SoloTerm\Solo\Support\SafeBytes;
 class ByteSpliceTest extends Base
 {
     #[Test]
-    public function slice_at_emoji_1()
+    public function slice_at_emoji_1(): void
     {
         $command = new Command;
 
@@ -26,7 +26,7 @@ class ByteSpliceTest extends Base
     }
 
     #[Test]
-    public function slice_at_emoji_2()
+    public function slice_at_emoji_2(): void
     {
         $command = new Command;
 
@@ -36,7 +36,7 @@ class ByteSpliceTest extends Base
     }
 
     #[Test]
-    public function slice_at_emoji_3()
+    public function slice_at_emoji_3(): void
     {
         $command = new Command;
 

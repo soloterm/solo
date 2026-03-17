@@ -25,7 +25,10 @@ class PendingProcess extends BasePendingProcess
 
     // Not all versions of Laravel have this. Once we drop
     // Laravel 10 we can remove this shim.
-    public function input($input)
+    /**
+     * @param  \Traversable<int, string>|resource|string|int|float|bool|null  $input
+     */
+    public function input(mixed $input): static
     {
         $this->input = $input;
 

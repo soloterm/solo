@@ -20,7 +20,7 @@ class About extends Command
 
     protected $description = 'Display information about Solo.';
 
-    public function handle()
+    public function handle(): int
     {
         $banner = <<<EOT
 ┃┃┃┃┃╰━━━━━━━╯┃┃┃┃┃   ███████╗ ██████╗ ██╗      ██████╗ 
@@ -57,5 +57,7 @@ Solo was developed by Aaron Francis. If you like it, please let me know!
 EOT;
 
         echo wordwrap($message);
+
+        return self::SUCCESS;
     }
 }

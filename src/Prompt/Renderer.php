@@ -90,7 +90,7 @@ class Renderer extends PromptsRenderer
     /**
      * Render the dashboard and retain the composed Screen for diff-based output.
      */
-    public function __invoke(Dashboard $dashboard)
+    public function __invoke(Dashboard $dashboard): mixed
     {
         $this->setup($dashboard);
 
@@ -131,7 +131,7 @@ class Renderer extends PromptsRenderer
         return $this->screen;
     }
 
-    public function __toString()
+    public function __toString(): string
     {
         // We're running the output right up to the edge,
         // so we can't afford phantom newlines.
@@ -259,7 +259,7 @@ class Renderer extends PromptsRenderer
         $this->line($state . $command);
     }
 
-    protected function marquee(string $string, int $width, int $frame)
+    protected function marquee(string $string, int $width, int $frame): string
     {
         $length = AnsiAware::mb_strlen($string);
 
@@ -306,7 +306,8 @@ class Renderer extends PromptsRenderer
         // into the pane separately in the __invoke method.
         $visible = collect($visibleContent)
             ->map(fn(string $line) => str_repeat(' ', mb_strlen(AnsiAware::plain($line), 'UTF-8')))
-            ->values();
+            ->values()
+            ->all();
 
         $totalLines = $wrappedLines->count();
 
@@ -324,9 +325,7 @@ class Renderer extends PromptsRenderer
         // If this conditional is true then it means that there wasn't
         // enough content to scroll, so we have to pretend by padding.
         if ($scrolled === $visible) {
-            $scrolled = collect($this->padScrolledContent($scrolled->all(), $allowedLines));
-        } elseif (is_array($scrolled)) {
-            $scrolled = collect($scrolled);
+            $scrolled = $this->padScrolledContent($scrolled, $allowedLines);
         }
 
         foreach ($scrolled as $line) {
@@ -403,7 +402,7 @@ class Renderer extends PromptsRenderer
         $this->renderHotkeySubset($globalHotkeys);
     }
 
-    protected function box($part)
+    protected function box(string $part): string
     {
         $box = $this->currentCommand->isInteractive() ? $this->theme->boxInteractive() : $this->theme->box();
 
@@ -420,18 +419,22 @@ class Renderer extends PromptsRenderer
         return $this->boxCache[$box][$part] ?? $part;
     }
 
-    protected function coloredBox($piece): string
+    protected function coloredBox(string $piece): string
     {
         return $this->colorBox($this->box($piece));
     }
 
-    protected function colorBox($text): string
+    protected function colorBox(string $text): string
     {
         return $this->currentCommand->isInteractive()
             ? $this->theme->boxBorderInteractive($text)
             : $this->theme->boxBorder($text);
     }
 
+    /**
+     * @param  array<int, string>  $scrolled
+     * @return array<int, string>
+     */
     protected function padScrolledContent(array $scrolled, int $allowedLines): array
     {
         // Fill out the collection with enough lines to fill the screen.
@@ -448,12 +451,16 @@ class Renderer extends PromptsRenderer
         }, $scrolled);
     }
 
+    /**
+     * @param  Collection<int, array{command: Command, display: string, focused: bool}>  $tabs
+     * @return array{0: int, 1: int}
+     */
     protected function calculateVisibleTabs(
         Collection $tabs,
         int $focused,
         int $maxWidth,
-        $moreOnLeft = false,
-        $moreOnRight = false
+        bool $moreOnLeft = false,
+        bool $moreOnRight = false
     ): array {
         // Start with just the focused tab.
         $selectedTabs = collect($tabs->slice($focused, 1));
@@ -533,6 +540,9 @@ class Renderer extends PromptsRenderer
         return [++$left, --$right];
     }
 
+    /**
+     * @param  array<int|string, \SoloTerm\Solo\Hotkeys\Hotkey>  $hotkeys
+     */
     protected function renderHotkeySubset(array $hotkeys): void
     {
         foreach ($hotkeys as $hotkey) {
@@ -618,10 +628,6 @@ class Renderer extends PromptsRenderer
         }
 
         $padLength = mb_strlen($pad);
-
-        if ($padLength === 0) {
-            return '';
-        }
 
         $repeated = str_repeat($pad, (int) ceil($length / $padLength));
 

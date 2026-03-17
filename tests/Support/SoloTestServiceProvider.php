@@ -13,7 +13,7 @@ use Illuminate\Support\ServiceProvider;
 
 class SoloTestServiceProvider extends ServiceProvider
 {
-    public function boot()
+    public function boot(): void
     {
         //
     }

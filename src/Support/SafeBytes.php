@@ -13,6 +13,9 @@ class SafeBytes
 {
     public static int $backtrack = 10;
 
+    /**
+     * @return array{0: string, 1: string}
+     */
     public static function parse(string $string): array
     {
         $len = strlen($string);
